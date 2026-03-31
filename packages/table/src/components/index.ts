@@ -1,4 +1,5 @@
 export { default as StarTable } from './StarTable.vue'
+export { default as StarVirtualTable } from './StarVirtualTable.vue'
 export { default as TableToolbar } from './TableToolbar.vue'
+export { default as StarPagination } from './StarPagination.vue'
 export { CellRendererRegistry, resolveRenderer } from './renderer'
-export * from './cells'

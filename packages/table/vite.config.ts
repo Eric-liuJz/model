@@ -1,9 +1,13 @@
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import dts from 'vite-plugin-dts';
-import { resolve } from 'path';
+/// <reference types="vitest" />
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import dts from 'vite-plugin-dts'
+import { resolve } from 'path'
 
 export default defineConfig({
+  test: {
+    environment: 'happy-dom'
+  },
   plugins: [
     vue(),
     dts({
@@ -19,7 +23,16 @@ export default defineConfig({
       fileName: (format) => `star-table-core.${format}.js`
     },
     rollupOptions: {
-      external: ['vue', 'element-plus', '@element-plus/icons-vue', 'dayjs', '@vueuse/core', 'sortablejs', 'lodash-es', 'xlsx'],
+      external: [
+        'vue',
+        'element-plus',
+        '@element-plus/icons-vue',
+        'dayjs',
+        '@vueuse/core',
+        'sortablejs',
+        'lodash-es',
+        'xlsx'
+      ],
       output: {
         globals: {
           vue: 'Vue',
@@ -28,4 +41,4 @@ export default defineConfig({
       }
     }
   }
-});
+})

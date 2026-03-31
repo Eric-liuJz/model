@@ -3,6 +3,8 @@
  * 所有原子组件和主框架组件的 SCSS 样式将提取汇聚于此
  */
 @use './toolbar';
+@use './virtual';
+@use './pagination';
 
 .star-cell-text {
   /* 基础文本单元格样式占位 */
@@ -24,5 +26,3 @@
   gap: 8px; /* 按钮默认间距 */
   flex-wrap: wrap;
 }
-
-

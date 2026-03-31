@@ -1,8 +1,10 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends Record<string, any>">
 import { computed, useSlots, defineComponent } from 'vue'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import type { ColumnConfig } from '../types/column'
+import type { PaginationConfig } from '../types/pagination'
 import { resolveRenderer } from './renderer'
+import StarPagination from './StarPagination.vue'
 
 /**
  * StarTable 核心表格组件。
@@ -15,34 +17,40 @@ import { resolveRenderer } from './renderer'
 
 const props = defineProps<{
   /** 经 useTableCore 引擎计算后的可见列配置 */
-  columns: ColumnConfig[]
+  columns: ColumnConfig<T>[]
   /** 表格数据源 */
-  data: any[]
+  data: T[]
   /** 行数据主键 */
   rowKey?: string
+  /** 是否开启分页，或传入具体分页配置对象 */
+  pagination?: boolean | PaginationConfig
+  /** 数据总条数（分页使用） */
+  total?: number
 }>()
+
+// 分页双向绑定
+const currentPage = defineModel<number>('currentPage', { default: 1 })
+const pageSize = defineModel<number>('pageSize', { default: 20 })
 
 const emit = defineEmits<{
   (e: 'sort-change', payload: any): void
   (e: 'selection-change', selection: any[]): void
   (e: 'filter-change', filters: Record<string, any[]>): void
   (e: 'action', event: string, row: any, index: number): void
+  (e: 'pagination-change'): void
 }>()
 
 const slots = useSlots()
 
 /** 分离特殊功能列与普通数据列 */
-const selectionColumn = computed(() =>
-  props.columns.find(col => col.type === 'selection')
-)
-const expandColumn = computed(() =>
-  props.columns.find(col => col.type === 'expand')
-)
+const selectionColumn = computed(() => props.columns.find((col) => col.type === 'selection'))
+const expandColumn = computed(() => props.columns.find((col) => col.type === 'expand'))
+
 const dataColumns = computed(() =>
-  props.columns.filter(col => col.type !== 'selection' && col.type !== 'expand')
+  props.columns.filter((col) => col.type !== 'selection' && col.type !== 'expand')
 )
 
-/** 
+/**
  * 专门用于挂载直接返回 VNode 的定制渲染器（防止内联包裹函数导致的重新挂载闪烁）
  */
 const StarVNodeRenderer = defineComponent({
@@ -113,14 +121,14 @@ const StarVNodeRenderer = defineComponent({
           <span>{{ col.label }}</span>
           <el-tooltip
             v-if="col.headerTooltip"
-            :content="typeof col.headerTooltip === 'string'
-              ? col.headerTooltip
-              : col.headerTooltip.content"
-            :placement="typeof col.headerTooltip === 'object'
-              ? col.headerTooltip.placement ?? 'top'
-              : 'top'"
+            :content="
+              typeof col.headerTooltip === 'string' ? col.headerTooltip : col.headerTooltip.content
+            "
+            :placement="
+              typeof col.headerTooltip === 'object' ? (col.headerTooltip.placement ?? 'top') : 'top'
+            "
           >
-            <el-icon style="margin-left: 4px; cursor: help; vertical-align: middle;">
+            <el-icon style="margin-left: 4px; cursor: help; vertical-align: middle">
               <QuestionFilled />
             </el-icon>
           </el-tooltip>
@@ -130,17 +138,9 @@ const StarVNodeRenderer = defineComponent({
       <!-- 单元格内容区域 -->
       <template #default="{ row, $index }">
         <!-- 优先级 1：具名插槽优先 (基于 prop) -->
-        <slot
-          v-if="$slots[String(col.prop)]"
-          :name="String(col.prop)"
-          :row="row"
-          :index="$index"
-        />
+        <slot v-if="$slots[String(col.prop)]" :name="String(col.prop)" :row="row" :index="$index" />
         <!-- 优先级 2：renderCell 高阶自定义 -->
-        <StarVNodeRenderer
-          v-else-if="col.renderCell"
-          :vnode="col.renderCell!(row, $index)"
-        />
+        <StarVNodeRenderer v-else-if="col.renderCell" :vnode="col.renderCell!(row, $index)" />
         <!-- 优先级 3：特定类型工厂渲染 (如 action 派发事件) -->
         <component
           v-else-if="col.type === 'action'"
@@ -161,4 +161,14 @@ const StarVNodeRenderer = defineComponent({
       </template>
     </el-table-column>
   </el-table>
+
+  <!-- 底部统一分页栏 (原子组件接管) -->
+  <StarPagination
+    v-if="pagination"
+    :config="pagination"
+    :total="total ?? 0"
+    v-model:current-page="currentPage"
+    v-model:page-size="pageSize"
+    @change="() => emit('pagination-change')"
+  />
 </template>

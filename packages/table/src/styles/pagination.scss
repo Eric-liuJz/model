@@ -1,0 +1,34 @@
+/** ===========================
+ * StarTable 分页组件样式
+ * =========================== */
+
+.star-table-pagination-wrapper {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end; /* 默认右对齐，企业级最常见布局 */
+  align-items: center;
+
+  /* 稍微加一点极简的呼吸感和玻璃边距，让它不至于贴着表格太死板 */
+  padding: 8px 0;
+
+  :deep(.el-pagination) {
+    --el-pagination-bg-color: transparent;
+
+    .btn-prev,
+    .btn-next,
+    .el-pager li {
+      border-radius: 6px; /* 更现代的圆角 */
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+    }
+
+    .el-pager li.is-active {
+      box-shadow: 0 4px 10px rgba(64, 158, 255, 0.3); /* 活动页发光效果 */
+      font-weight: bold;
+    }
+  }
+}

@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { StarTable, TableToolbar, useTableCore, useExport } from '@star-table/core'
 import { ElMessage } from 'element-plus'
 import { mockTableData, basicColumnsConfig, type UserRow } from './config'
 import './style.scss'
+
+// --- 0. 分页处理 (Mock 数据切片) ---
+const currentPage = ref(1)
+const pageSize = ref(10)
+const displayData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return mockTableData.value.slice(start, start + pageSize.value)
+})
 
 // --- 1. 初始化状态引擎 ---
 const {
@@ -74,15 +83,26 @@ const handleExport = () => {
       <!-- 核心表格 -->
       <StarTable
         row-key="id"
-        :data="mockTableData"
+        :data="displayData"
         :columns="visibleColumns"
+        :pagination="true"
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :total="mockTableData.length"
         @action="handleAction"
         @selection-change="handleSelectionChange"
         @filter-change="handleFilterChange"
       >
         <!-- #expand 展开行插槽演示 -->
         <template #expand="{ row }">
-          <div style="padding: 20px; background-color: var(--el-fill-color-light); border-radius: 4px; margin: 0 50px;">
+          <div
+            style="
+              padding: 20px;
+              background-color: var(--el-fill-color-light);
+              border-radius: 4px;
+              margin: 0 50px;
+            "
+          >
             <h4>附加详细信息（仅供 expand 展开行使用）</h4>
             <p><strong>账号 ID:</strong> {{ row.id }}</p>
             <p><strong>近期明细:</strong> {{ row.details }}</p>
@@ -90,7 +110,11 @@ const handleExport = () => {
         </template>
         <!-- #customAction 插槽覆盖演示 -->
         <template #customAction="{ row }">
-          <el-button size="small" type="success" @click="ElMessage.warning(`通过插槽操作 ${row.name}`)">
+          <el-button
+            size="small"
+            type="success"
+            @click="ElMessage.warning(`通过插槽操作 ${row.name}`)"
+          >
             自定义插槽
           </el-button>
         </template>
