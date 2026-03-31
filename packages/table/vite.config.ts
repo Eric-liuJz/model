@@ -11,7 +11,7 @@ export default defineConfig({
       fileName: (format) => `star-table-core.${format}.js`
     },
     rollupOptions: {
-      external: ['vue', 'element-plus'],
+      external: ['vue', 'element-plus', '@element-plus/icons-vue', 'dayjs', '@vueuse/core', 'sortablejs', 'lodash-es'],
       output: {
         globals: {
           vue: 'Vue',

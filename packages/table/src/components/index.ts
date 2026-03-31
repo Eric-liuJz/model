@@ -1,2 +1,3 @@
-// Export all generic components here
-export const dummy = true;
+export { default as StarTable } from './StarTable.vue'
+export { CellRendererRegistry, resolveRenderer } from './renderer'
+export * from './cells'
