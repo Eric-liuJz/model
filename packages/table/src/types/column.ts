@@ -5,14 +5,14 @@ import type { VNode } from 'vue'
  * 该类型标识决定了底层渲染工厂将装载哪个原子展现组件。
  */
 export type ColumnType =
-  | 'text'      // 默认纯文本输出
-  | 'date'      // 时间格式化渲染
-  | 'tag'       // 枚举标签渲染（根据字典映射颜色与文本）
-  | 'link'      // 超链接锚文本渲染
-  | 'action'    // 操作按钮组合列
+  | 'text' // 默认纯文本输出
+  | 'date' // 时间格式化渲染
+  | 'tag' // 枚举标签渲染（根据字典映射颜色与文本）
+  | 'link' // 超链接锚文本渲染
+  | 'action' // 操作按钮组合列
   | 'selection' // 批量勾选列
-  | 'index'     // 自增序号列
-  | 'expand'    // 详情展开列
+  | 'index' // 自增序号列
+  | 'expand' // 详情展开列
 
 /**
  * 表头浮层提示的深层配置接口。
@@ -53,7 +53,6 @@ export interface ActionItem {
  * @template T - 业务行数据的泛型结构
  */
 export interface ColumnConfig<T = Record<string, any>> {
-
   // ==========================================
   // 1. 数据绑定与骨架 (Data Binding & Skeleton)
   // ==========================================
@@ -179,6 +178,8 @@ export interface ColumnConfig<T = Record<string, any>> {
 export interface ColumnState {
   /** 关联源 ColumnConfig 的唯一标识 */
   prop: string
+  /** 关联源 ColumnConfig 的展示标签，供工具栏使用 */
+  label?: string
   /** 响应式可见性状态 */
   show: boolean
   /** 响应式固定吸附方向 */

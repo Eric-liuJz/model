@@ -42,10 +42,13 @@ const pageSize = defineModel<number>('pageSize', { default: 20 })
 
 const emit = defineEmits<{
   (e: 'action', event: string, row: any, index: number): void
+  (e: 'sort-change', payload: any): void
   (e: 'pagination-change'): void
 }>()
 
 const slots = useSlots() as Record<string, ((...args: any[]) => any) | undefined>
+const unsupportedTypes = new Set(['expand', 'selection'])
+const warnedUnsupportedTypes = new Set<string>()
 
 /**
  * 核心桥接层：将我们统一的 ColumnConfig 协议转换为 el-table-v2 的 Column 规范。
@@ -60,8 +63,16 @@ const slots = useSlots() as Record<string, ((...args: any[]) => any) | undefined
  * - headerCellRenderer?: fn  自定义表头
  */
 const v2Columns = computed<Column<any>[]>(() => {
+  props.columns.forEach((col) => {
+    const type = String(col.type ?? '')
+    if (unsupportedTypes.has(type) && !warnedUnsupportedTypes.has(type)) {
+      warnedUnsupportedTypes.add(type)
+      console.warn(`[StarVirtualTable] Column type "${type}" is not supported and will be ignored.`)
+    }
+  })
+
   return props.columns
-    .filter((col) => col.type !== 'expand') // v2 无 expand 支持
+    .filter((col) => !unsupportedTypes.has(String(col.type ?? ''))) // v2 无 expand/selection 支持
     .map((col) => {
       const colKey = String(col.prop)
       const colDef: Column<any> = {
@@ -169,6 +180,8 @@ const rowKeyField = computed(() => props.rowKey ?? 'id')
           :row-height="rowHeight ?? 50"
           :estimated-row-height="estimatedRowHeight"
           fixed
+          @column-sort="(payload: any) => emit('sort-change', payload)"
+          @sort-change="(payload: any) => emit('sort-change', payload)"
         />
       </template>
     </el-auto-resizer>

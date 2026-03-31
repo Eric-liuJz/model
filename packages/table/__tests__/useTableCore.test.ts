@@ -33,10 +33,13 @@ describe('useTableCore', () => {
     expect(columnStates.value).toHaveLength(5)
     expect(columnStates.value[0]).toEqual({
       prop: 'id',
+      label: 'ID',
       show: true,
       fixed: false,
       width: 80
     })
+    // 也能获取未显式提供配置的列的 label
+    expect(columnStates.value[1].label).toBe('名称')
     // createTime 列初始设定 show: false
     expect(columnStates.value[3].show).toBe(false)
     // action 列初始设定 fixed: 'right'
@@ -157,6 +160,25 @@ describe('useTableCore', () => {
     expect(columnStates.value[2].prop).toBe('action')
     expect(columnStates.value[3].prop).toBe('status')
     expect(columnStates.value[4].prop).toBe('createTime')
+  })
+
+  it('reorderColumns 接收到非法索引时应当静默跳过且不触发埋点', () => {
+    const columns = createMockColumns()
+    const trackLogger = vi.fn()
+    const { columnStates, reorderColumns } = useTableCore<MockRow>({
+      columns,
+      track: trackLogger
+    })
+
+    const before = columnStates.value.map((s) => s.prop)
+
+    expect(() => reorderColumns(-1, 2)).not.toThrow()
+    expect(() => reorderColumns(100, 2)).not.toThrow()
+    expect(() => reorderColumns(1, 100)).not.toThrow()
+    expect(() => reorderColumns(1, 1)).not.toThrow()
+
+    expect(columnStates.value.map((s) => s.prop)).toEqual(before)
+    expect(trackLogger).not.toHaveBeenCalled()
   })
 
   describe('静默埋点追踪行为 (Telemetry Tracking)', () => {

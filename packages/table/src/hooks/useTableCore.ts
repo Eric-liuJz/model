@@ -24,6 +24,7 @@ export function useTableCore<T>(options: TableOptions<T>) {
   /** 从不可变的原始配置中提取初始瞬态属性 */
   const initStates: ColumnState[] = columns.map((col) => ({
     prop: String(col.prop),
+    label: col.label ?? String(col.prop),
     show: col.show ?? true,
     fixed: col.fixed ?? false,
     width: col.width
@@ -135,8 +136,20 @@ export function useTableCore<T>(options: TableOptions<T>) {
    * @param newIndex - 拖拽目标位置
    */
   const reorderColumns = (oldIndex: number, newIndex: number): void => {
+    const maxIndex = columnStates.value.length - 1
+    if (
+      oldIndex < 0 ||
+      newIndex < 0 ||
+      oldIndex > maxIndex ||
+      newIndex > maxIndex ||
+      oldIndex === newIndex
+    ) {
+      return
+    }
+
     const list = [...columnStates.value]
     const [moved] = list.splice(oldIndex, 1)
+    if (!moved) return
     list.splice(newIndex, 0, moved)
     columnStates.value = list
 

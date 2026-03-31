@@ -18,14 +18,16 @@ describe('StarVirtualTable 虚拟表格构建引擎与代理桥接测试', () =>
       'el-table-v2': {
         name: 'ElTableV2',
         template: '<div></div>',
-        props: ['columns', 'rowHeight', 'estimatedRowHeight']
+        props: ['columns', 'rowHeight', 'estimatedRowHeight'],
+        emits: ['column-sort', 'sort-change']
       },
       'star-pagination': true
     }
   }
 
-  it('应当剔出 type="expand" 的列，因虚拟树并不支持此特性', () => {
+  it('应当剔出 type="expand" / type="selection" 的列，因虚拟树并不支持此特性', () => {
     const columns: ColumnConfig[] = [
+      { prop: 'selection_col', type: 'selection', width: 50 },
       { prop: 'expand_col', type: 'expand', width: 50 },
       { prop: 'name', width: 100 }
     ]
@@ -64,10 +66,14 @@ describe('StarVirtualTable 虚拟表格构建引擎与代理桥接测试', () =>
 
     const passedV2Props = wrapper.findComponent({ name: 'ElTableV2' }).props('columns') as any[]
 
-    expect(passedV2Props[0].width).toBe(50)
-    expect(passedV2Props[1].width).toBe(60)
-    expect(passedV2Props[2].width).toBe(200)
-    expect(passedV2Props[3].width).toBe(300)
+    // selection 会被过滤，剩余 index/sz1/sz2
+    expect(passedV2Props).toHaveLength(3)
+    expect(passedV2Props[0].key).toBe('ix')
+    expect(passedV2Props[0].width).toBe(60)
+    expect(passedV2Props[1].key).toBe('sz1')
+    expect(passedV2Props[1].width).toBe(200)
+    expect(passedV2Props[2].key).toBe('sz2')
+    expect(passedV2Props[2].width).toBe(300)
   })
 
   it('内部引擎应当桥接 rowHeight 与 estimatedRowHeight 的透明代理', () => {
@@ -108,5 +114,19 @@ describe('StarVirtualTable 虚拟表格构建引擎与代理桥接测试', () =>
     // 由于不是 shallowMount，但没渲染 children，我们断言其 vnode 型态
     expect(vNodeResult.type).toBe('span')
     expect(vNodeResult.children).toBe('Turing_fn') // 自定义的 renderCell 正常映射成 vnode
+  })
+
+  it('应当透传虚拟表排序事件为 sort-change', () => {
+    const wrapper = mount(StarVirtualTable, {
+      props: { columns: [{ prop: 'name', sortable: true, width: 120 }], data: dummyData },
+      global: globalConfig
+    })
+
+    const payload = { key: 'name', order: 'asc' }
+    const elTableV2 = wrapper.findComponent({ name: 'ElTableV2' })
+    elTableV2.vm.$emit('column-sort', payload)
+
+    expect(wrapper.emitted('sort-change')).toBeTruthy()
+    expect(wrapper.emitted('sort-change')?.[0]).toEqual([payload])
   })
 })

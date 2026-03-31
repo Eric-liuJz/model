@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
           @change="(val: boolean | string | number) => handleToggle(state.prop, val)"
           class="column-checkbox"
         >
-          {{ state.prop }}
+          {{ state.label || state.prop }}
         </el-checkbox>
         <el-button
           size="small"
