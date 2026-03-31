@@ -3,6 +3,7 @@ import App from './App.vue'
 import router from './router'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import '@star-table/core/dist/style.css'
 import { VERSION } from '@star-table/core'
 
 console.log('StarTableCore Version:', VERSION)
