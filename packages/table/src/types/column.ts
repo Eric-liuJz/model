@@ -11,6 +11,7 @@ export type ColumnType =
   | 'link'      // 超链接锚文本渲染
   | 'action'    // 操作按钮组合列
   | 'selection' // 批量勾选列
+  | 'index'     // 自增序号列
   | 'expand'    // 详情展开列
 
 /**
@@ -132,11 +133,29 @@ export interface ColumnConfig<T = Record<string, any>> {
    */
   fixed?: 'left' | 'right' | false
 
-  /**
-   * 排序通道开关。
-   * 设定为 'custom' 表示截断内部比较，委托远程服务端处理。
-   */
+  // --- Element Plus Native Props ---
+
+  /** 是否可排序 */
   sortable?: boolean | 'custom'
+
+  /** 列的 className */
+  className?: string
+
+  /** 当内容过长被隐藏时显示 tooltip */
+  showOverflowTooltip?: boolean
+
+  /**
+   * 表头过滤器的枚举字典。
+   * 设置后将自动在表头挂载漏斗图标，并弹出下拉勾选面板。
+   * @example [{ text: '正常', value: 'active' }, { text: '封禁', value: 'banned' }]
+   */
+  filters?: { text: string; value: any }[]
+
+  /** 过滤是否支持多选（默认 true） */
+  filterMultiple?: boolean
+
+  /** 过滤面板弹出方位 */
+  filterPlacement?: string
 
   // ==========================================
   // 6. 高阶内容定制 (Advanced Custom Renderer)

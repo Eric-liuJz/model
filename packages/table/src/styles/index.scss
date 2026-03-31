@@ -2,6 +2,7 @@
  * @star-table/core 核心组件独立样式入口
  * 所有原子组件和主框架组件的 SCSS 样式将提取汇聚于此
  */
+@use './toolbar';
 
 .star-cell-text {
   /* 基础文本单元格样式占位 */
@@ -23,3 +24,5 @@
   gap: 8px; /* 按钮默认间距 */
   flex-wrap: wrap;
 }
+
+

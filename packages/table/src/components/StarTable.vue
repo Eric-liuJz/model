@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useSlots } from 'vue'
+import { computed, useSlots, defineComponent } from 'vue'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import type { ColumnConfig } from '../types/column'
 import { resolveRenderer } from './renderer'
@@ -25,6 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'sort-change', payload: any): void
   (e: 'selection-change', selection: any[]): void
+  (e: 'filter-change', filters: Record<string, any[]>): void
   (e: 'action', event: string, row: any, index: number): void
 }>()
 
@@ -40,6 +41,16 @@ const expandColumn = computed(() =>
 const dataColumns = computed(() =>
   props.columns.filter(col => col.type !== 'selection' && col.type !== 'expand')
 )
+
+/** 
+ * 专门用于挂载直接返回 VNode 的定制渲染器（防止内联包裹函数导致的重新挂载闪烁）
+ */
+const StarVNodeRenderer = defineComponent({
+  props: ['vnode'],
+  render() {
+    return this.vnode
+  }
+})
 </script>
 
 <template>
@@ -49,6 +60,7 @@ const dataColumns = computed(() =>
     border
     @sort-change="(val: any) => emit('sort-change', val)"
     @selection-change="(val: any[]) => emit('selection-change', val)"
+    @filter-change="(filters: any) => emit('filter-change', filters)"
   >
     <!-- 勾选列 -->
     <el-table-column
@@ -66,7 +78,9 @@ const dataColumns = computed(() =>
       :fixed="expandColumn.fixed || false"
     >
       <template #default="{ row, $index }">
-        <slot name="expand" :row="row" :index="$index" />
+        <div class="star-table-expand-wrapper">
+          <slot name="expand" :row="row" :index="$index" />
+        </div>
       </template>
     </el-table-column>
 
@@ -74,6 +88,7 @@ const dataColumns = computed(() =>
     <el-table-column
       v-for="col in dataColumns"
       :key="String(col.prop)"
+      :type="['selection', 'index'].includes(col.type as string) ? col.type : undefined"
       :prop="String(col.prop)"
       :label="col.label"
       :width="col.width"
@@ -81,12 +96,18 @@ const dataColumns = computed(() =>
       :fixed="col.fixed || false"
       :align="col.align"
       :sortable="col.sortable || false"
+      :show-overflow-tooltip="col.showOverflowTooltip"
+      :class-name="col.className"
+      :filters="col.filters"
+      :filter-multiple="col.filterMultiple ?? true"
+      :filter-placement="col.filterPlacement"
+      :column-key="String(col.prop)"
     >
       <!-- 表头区域 -->
       <template #header>
-        <component
+        <StarVNodeRenderer
           v-if="col.renderHeader"
-          :is="() => col.renderHeader!(col, dataColumns.indexOf(col))"
+          :vnode="col.renderHeader!(col, dataColumns.indexOf(col))"
         />
         <template v-else>
           <span>{{ col.label }}</span>
@@ -108,29 +129,28 @@ const dataColumns = computed(() =>
 
       <!-- 单元格内容区域 -->
       <template #default="{ row, $index }">
-        <!-- 优先级 1：renderCell 高阶自定义 -->
-        <component
-          v-if="col.renderCell"
-          :is="() => col.renderCell!(row, $index)"
+        <!-- 优先级 1：具名插槽优先 (基于 prop) -->
+        <slot
+          v-if="$slots[String(col.prop)]"
+          :name="String(col.prop)"
+          :row="row"
+          :index="$index"
         />
-        <!-- 优先级 2：操作列 — 插槽逃生优先，无插槽则走 CellAction 配置驱动 -->
-        <template v-else-if="col.type === 'action'">
-          <slot
-            v-if="slots.action"
-            name="action"
-            :row="row"
-            :index="$index"
-          />
-          <component
-            v-else
-            :is="resolveRenderer('action')"
-            :row="row"
-            :index="$index"
-            :options="col.typeOptions"
-            @action="(event: string, r: any, i: number) => emit('action', event, r, i)"
-          />
-        </template>
-        <!-- 优先级 3：工厂渲染 -->
+        <!-- 优先级 2：renderCell 高阶自定义 -->
+        <StarVNodeRenderer
+          v-else-if="col.renderCell"
+          :vnode="col.renderCell!(row, $index)"
+        />
+        <!-- 优先级 3：特定类型工厂渲染 (如 action 派发事件) -->
+        <component
+          v-else-if="col.type === 'action'"
+          :is="resolveRenderer('action')"
+          :row="row"
+          :index="$index"
+          :options="col.typeOptions"
+          @action="(event: string, r: any, i: number) => emit('action', event, r, i)"
+        />
+        <!-- 优先级 4：通用工厂渲染 -->
         <component
           v-else
           :is="resolveRenderer(col.type)"

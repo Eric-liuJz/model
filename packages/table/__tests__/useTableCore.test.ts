@@ -125,4 +125,30 @@ describe('useTableCore', () => {
     expect(() => toggleColumnVisibility('nonexistent', true)).not.toThrow()
     expect(() => pinColumn('nonexistent', 'left')).not.toThrow()
   })
+
+  it('reorderColumns 应当能正确平移列状态位置', () => {
+    const columns = createMockColumns()
+    const { columnStates, reorderColumns } = useTableCore<MockRow>({ columns })
+
+    // 初始顺序: id, name, status, createTime, action
+    expect(columnStates.value[0].prop).toBe('id')
+    expect(columnStates.value[1].prop).toBe('name')
+    expect(columnStates.value[2].prop).toBe('status')
+
+    // 将 'name' (索引1) 拖拽到最前面 (索引0)
+    reorderColumns(1, 0)
+
+    expect(columnStates.value[0].prop).toBe('name')
+    expect(columnStates.value[1].prop).toBe('id')
+    expect(columnStates.value[2].prop).toBe('status')
+
+    // 跨度拖拽: 将最后的 'action' (索引4) 拖到 'status' 的位置 (变成索引2)
+    // 此时顺序: name, id, status, createTime, action
+    reorderColumns(4, 2)
+    
+    // 移动后顺序应为: name, id, action, status, createTime
+    expect(columnStates.value[2].prop).toBe('action')
+    expect(columnStates.value[3].prop).toBe('status')
+    expect(columnStates.value[4].prop).toBe('createTime')
+  })
 })

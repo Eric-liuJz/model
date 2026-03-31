@@ -42,6 +42,30 @@ export function useTableCore<T>(options: TableOptions<T>) {
     ? useLocalStorage<ColumnState[]>(`star-table-${cacheKey}`, initStates.map(s => ({ ...s })))
     : ref<ColumnState[]>(initStates.map(s => ({ ...s })))
 
+  // 缓存校对：处理配置增删字段导致与缓存不一致的问题
+  if (cacheKey) {
+    const cached = columnStates.value
+    const newStates: ColumnState[] = []
+    
+    // 1. 保留缓存中仍然存在于最新配置中的列（维持用户可能拖拽的顺序）
+    cached.forEach(s => {
+      if (columns.some(c => String(c.prop) === s.prop)) {
+        newStates.push(s)
+      }
+    })
+    
+    // 2. 将配置中新增的列追加进去（避免新加的列无法显示）
+    columns.forEach(col => {
+      if (!newStates.some(s => s.prop === String(col.prop))) {
+        const init = initStates.find(s => s.prop === String(col.prop))
+        if (init) newStates.push({ ...init })
+      }
+    })
+
+    // 3. 更新为校验后的状态
+    columnStates.value = newStates
+  }
+
   // ==========================================
   // 3. 只读数据流出口 (Read-Only Data Stream)
   // ==========================================
@@ -95,6 +119,20 @@ export function useTableCore<T>(options: TableOptions<T>) {
   }
 
   /**
+   * 列排序换位操作。
+   * 接收 SortableJS 等拖拽库输出的起止下标，对 columnStates 数组执行元素平移。
+   *
+   * @param oldIndex - 拖拽起始位置
+   * @param newIndex - 拖拽目标位置
+   */
+  const reorderColumns = (oldIndex: number, newIndex: number): void => {
+    const list = [...columnStates.value]
+    const [moved] = list.splice(oldIndex, 1)
+    list.splice(newIndex, 0, moved)
+    columnStates.value = list
+  }
+
+  /**
    * 回溯至初始状态快照。
    * 擦除所有用户交互产生的偏移记录，包括本地持久层的缓存数据。
    */
@@ -115,6 +153,8 @@ export function useTableCore<T>(options: TableOptions<T>) {
     toggleColumnVisibility,
     /** 干预：设置列固定方向 */
     pinColumn,
+    /** 干预：列顺序换位 */
+    reorderColumns,
     /** 清理：重置至初始状态 */
     resetConfig
   }
