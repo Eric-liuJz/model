@@ -39,8 +39,8 @@ export function useTableCore<T>(options: TableOptions<T>) {
    * 实现跨会话持久化；否则退化为普通 ref。
    */
   const columnStates: Ref<ColumnState[]> = cacheKey
-    ? useLocalStorage<ColumnState[]>(`star-table-${cacheKey}`, initStates)
-    : ref<ColumnState[]>(initStates)
+    ? useLocalStorage<ColumnState[]>(`star-table-${cacheKey}`, initStates.map(s => ({ ...s })))
+    : ref<ColumnState[]>(initStates.map(s => ({ ...s })))
 
   // ==========================================
   // 3. 只读数据流出口 (Read-Only Data Stream)
