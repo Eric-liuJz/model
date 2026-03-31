@@ -1,4 +1,4 @@
-import { ref, computed, unref, type Ref } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 import type { TableOptions } from '../types/table'
 import type { ColumnConfig, ColumnState } from '../types/column'
@@ -22,7 +22,7 @@ export function useTableCore<T>(options: TableOptions<T>) {
   // ==========================================
 
   /** 从不可变的原始配置中提取初始瞬态属性 */
-  const initStates: ColumnState[] = columns.map(col => ({
+  const initStates: ColumnState[] = columns.map((col) => ({
     prop: String(col.prop),
     show: col.show ?? true,
     fixed: col.fixed ?? false,
@@ -39,25 +39,28 @@ export function useTableCore<T>(options: TableOptions<T>) {
    * 实现跨会话持久化；否则退化为普通 ref。
    */
   const columnStates: Ref<ColumnState[]> = cacheKey
-    ? useLocalStorage<ColumnState[]>(`star-table-${cacheKey}`, initStates.map(s => ({ ...s })))
-    : ref<ColumnState[]>(initStates.map(s => ({ ...s })))
+    ? useLocalStorage<ColumnState[]>(
+        `star-table-${cacheKey}`,
+        initStates.map((s) => ({ ...s }))
+      )
+    : ref<ColumnState[]>(initStates.map((s) => ({ ...s })))
 
   // 缓存校对：处理配置增删字段导致与缓存不一致的问题
   if (cacheKey) {
     const cached = columnStates.value
     const newStates: ColumnState[] = []
-    
+
     // 1. 保留缓存中仍然存在于最新配置中的列（维持用户可能拖拽的顺序）
-    cached.forEach(s => {
-      if (columns.some(c => String(c.prop) === s.prop)) {
+    cached.forEach((s) => {
+      if (columns.some((c) => String(c.prop) === s.prop)) {
         newStates.push(s)
       }
     })
-    
+
     // 2. 将配置中新增的列追加进去（避免新加的列无法显示）
-    columns.forEach(col => {
-      if (!newStates.some(s => s.prop === String(col.prop))) {
-        const init = initStates.find(s => s.prop === String(col.prop))
+    columns.forEach((col) => {
+      if (!newStates.some((s) => s.prop === String(col.prop))) {
+        const init = initStates.find((s) => s.prop === String(col.prop))
         if (init) newStates.push({ ...init })
       }
     })
@@ -77,9 +80,9 @@ export function useTableCore<T>(options: TableOptions<T>) {
    */
   const visibleColumns = computed<ColumnConfig<T>[]>(() => {
     return columnStates.value
-      .filter(state => state.show)
-      .map(state => {
-        const rawCol = columns.find(c => String(c.prop) === state.prop)
+      .filter((state) => state.show)
+      .map((state) => {
+        const rawCol = columns.find((c) => String(c.prop) === state.prop)
         if (!rawCol) return null
         return {
           ...rawCol,
@@ -102,7 +105,7 @@ export function useTableCore<T>(options: TableOptions<T>) {
    * @param isShow - 期望的可见性状态
    */
   const toggleColumnVisibility = (prop: string, isShow: boolean): void => {
-    const state = columnStates.value.find(s => s.prop === prop)
+    const state = columnStates.value.find((s) => s.prop === prop)
     if (state) state.show = isShow
   }
 
@@ -114,7 +117,7 @@ export function useTableCore<T>(options: TableOptions<T>) {
    * @param direction - 固定方向或解除固定
    */
   const pinColumn = (prop: string, direction: 'left' | 'right' | false): void => {
-    const state = columnStates.value.find(s => s.prop === prop)
+    const state = columnStates.value.find((s) => s.prop === prop)
     if (state) state.fixed = direction
   }
 
@@ -137,7 +140,7 @@ export function useTableCore<T>(options: TableOptions<T>) {
    * 擦除所有用户交互产生的偏移记录，包括本地持久层的缓存数据。
    */
   const resetConfig = (): void => {
-    columnStates.value = initStates.map(s => ({ ...s }))
+    columnStates.value = initStates.map((s) => ({ ...s }))
   }
 
   // ==========================================

@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { nextTick } from 'vue'
 import { useTableCore } from '../src/hooks/useTableCore'
 import type { ColumnConfig } from '../src/types/column'
-import type { TableOptions } from '../src/types/table'
 
 /** 测试用模拟数据结构 */
 interface MockRow {
@@ -16,20 +15,27 @@ interface MockRow {
 const createMockColumns = (): ColumnConfig<MockRow>[] => [
   { prop: 'id', label: 'ID', width: 80 },
   { prop: 'name', label: '名称', minWidth: 120 },
-  { prop: 'status', label: '状态', type: 'tag', typeOptions: { '1': { text: '成功', type: 'success' } } },
+  {
+    prop: 'status',
+    label: '状态',
+    type: 'tag',
+    typeOptions: { '1': { text: '成功', type: 'success' } }
+  },
   { prop: 'createTime', label: '创建时间', type: 'date', show: false },
-  { prop: 'action', label: '操作', type: 'action', fixed: 'right', width: 150 },
+  { prop: 'action', label: '操作', type: 'action', fixed: 'right', width: 150 }
 ]
 
 describe('useTableCore', () => {
-
   it('应当正确初始化 columnStates', () => {
     const columns = createMockColumns()
     const { columnStates } = useTableCore<MockRow>({ columns })
 
     expect(columnStates.value).toHaveLength(5)
     expect(columnStates.value[0]).toEqual({
-      prop: 'id', show: true, fixed: false, width: 80
+      prop: 'id',
+      show: true,
+      fixed: false,
+      width: 80
     })
     // createTime 列初始设定 show: false
     expect(columnStates.value[3].show).toBe(false)
@@ -43,7 +49,7 @@ describe('useTableCore', () => {
 
     // createTime 的 show 为 false，应被过滤
     expect(visibleColumns.value).toHaveLength(4)
-    const props = visibleColumns.value.map(c => c.prop)
+    const props = visibleColumns.value.map((c) => c.prop)
     expect(props).not.toContain('createTime')
     expect(props).toContain('id')
     expect(props).toContain('action')
@@ -53,7 +59,7 @@ describe('useTableCore', () => {
     const columns = createMockColumns()
     const { visibleColumns } = useTableCore<MockRow>({ columns })
 
-    const statusCol = visibleColumns.value.find(c => c.prop === 'status')
+    const statusCol = visibleColumns.value.find((c) => c.prop === 'status')
     expect(statusCol).toBeDefined()
     expect(statusCol!.type).toBe('tag')
     expect(statusCol!.typeOptions).toEqual({ '1': { text: '成功', type: 'success' } })
@@ -67,14 +73,14 @@ describe('useTableCore', () => {
     toggleColumnVisibility('name', false)
     await nextTick()
 
-    expect(visibleColumns.value.find(c => c.prop === 'name')).toBeUndefined()
+    expect(visibleColumns.value.find((c) => c.prop === 'name')).toBeUndefined()
     expect(visibleColumns.value).toHaveLength(3)
 
     // 显示 createTime 列
     toggleColumnVisibility('createTime', true)
     await nextTick()
 
-    expect(visibleColumns.value.find(c => c.prop === 'createTime')).toBeDefined()
+    expect(visibleColumns.value.find((c) => c.prop === 'createTime')).toBeDefined()
     expect(visibleColumns.value).toHaveLength(4)
   })
 
@@ -86,36 +92,37 @@ describe('useTableCore', () => {
     pinColumn('name', 'left')
     await nextTick()
 
-    const nameCol = visibleColumns.value.find(c => c.prop === 'name')
+    const nameCol = visibleColumns.value.find((c) => c.prop === 'name')
     expect(nameCol!.fixed).toBe('left')
 
     // 解除固定
     pinColumn('name', false)
     await nextTick()
 
-    const nameCol2 = visibleColumns.value.find(c => c.prop === 'name')
+    const nameCol2 = visibleColumns.value.find((c) => c.prop === 'name')
     expect(nameCol2!.fixed).toBe(false)
   })
 
   it('resetConfig 应当回溯至初始状态', async () => {
     const columns = createMockColumns()
-    const { visibleColumns, toggleColumnVisibility, pinColumn, resetConfig } = useTableCore<MockRow>({ columns })
+    const { visibleColumns, toggleColumnVisibility, pinColumn, resetConfig } =
+      useTableCore<MockRow>({ columns })
 
     // 做一些修改
     toggleColumnVisibility('id', false)
     pinColumn('name', 'right')
     await nextTick()
 
-    expect(visibleColumns.value.find(c => c.prop === 'id')).toBeUndefined()
-    expect(visibleColumns.value.find(c => c.prop === 'name')!.fixed).toBe('right')
+    expect(visibleColumns.value.find((c) => c.prop === 'id')).toBeUndefined()
+    expect(visibleColumns.value.find((c) => c.prop === 'name')!.fixed).toBe('right')
 
     // 重置
     resetConfig()
     await nextTick()
 
     expect(visibleColumns.value).toHaveLength(4) // createTime 初始就是 false
-    expect(visibleColumns.value.find(c => c.prop === 'id')).toBeDefined()
-    expect(visibleColumns.value.find(c => c.prop === 'name')!.fixed).toBe(false)
+    expect(visibleColumns.value.find((c) => c.prop === 'id')).toBeDefined()
+    expect(visibleColumns.value.find((c) => c.prop === 'name')!.fixed).toBe(false)
   })
 
   it('对不存在的 prop 调用操作方法时应当静默不报错', () => {
@@ -145,7 +152,7 @@ describe('useTableCore', () => {
     // 跨度拖拽: 将最后的 'action' (索引4) 拖到 'status' 的位置 (变成索引2)
     // 此时顺序: name, id, status, createTime, action
     reorderColumns(4, 2)
-    
+
     // 移动后顺序应为: name, id, action, status, createTime
     expect(columnStates.value[2].prop).toBe('action')
     expect(columnStates.value[3].prop).toBe('status')

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onBeforeUnmount, type Ref } from 'vue'
+import { ref, nextTick, onBeforeUnmount } from 'vue'
 import { Setting, Rank, RefreshRight, Download } from '@element-plus/icons-vue'
 import Sortable from 'sortablejs'
 import type { ColumnState } from '../types/column'
@@ -11,7 +11,7 @@ import type { ColumnState } from '../types/column'
  * 与 useTableCore 状态引擎无缝对接。
  */
 
-const props = defineProps<{
+defineProps<{
   /** 列瞬态属性的响应式数组引用（由 useTableCore.columnStates 传入） */
   columnStates: ColumnState[]
 }>()
@@ -145,9 +145,7 @@ onBeforeUnmount(() => {
     <template #header>
       <div class="drawer-header">
         <span class="drawer-title">列设置</span>
-        <el-button type="primary" link size="small" @click="handleReset">
-          重置默认
-        </el-button>
+        <el-button type="primary" link size="small" @click="handleReset"> 重置默认 </el-button>
       </div>
     </template>
 

@@ -13,13 +13,9 @@ const route = useRoute()
         <el-icon :size="20" color="#409eff"><Odometer /></el-icon>
         <span>@star-table/play</span>
       </div>
-      <el-menu
-        :default-active="route.path"
-        router
-        class="menu"
-      >
+      <el-menu :default-active="route.path" router class="menu">
         <el-menu-item index="/">
-          <el-icon><Menu /></el-icon>
+          <el-icon><IconMenu /></el-icon>
           <span>基础表格演示</span>
         </el-menu-item>
         <el-menu-item index="/virtual">
@@ -42,13 +38,12 @@ const route = useRoute()
 
 <script lang="ts">
 // 注册图标
-import { Odometer, Menu, DataLine } from '@element-plus/icons-vue'
+import { Odometer, Menu as IconMenu, DataLine } from '@element-plus/icons-vue'
 export default {
   components: {
     Odometer,
-    Menu,
+    IconMenu,
     DataLine
   }
 }
 </script>
-

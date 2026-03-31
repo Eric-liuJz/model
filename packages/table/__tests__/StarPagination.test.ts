@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StarPagination from '../src/components/StarPagination.vue'
-import { ElPagination } from 'element-plus'
 
 describe('StarPagination 原子组件', () => {
   it('如果传入 config 为 false 或 undefined，整个分页 DOM 应该被摧毁 (v-if)', () => {

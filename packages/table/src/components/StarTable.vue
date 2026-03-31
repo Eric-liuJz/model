@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { computed, useSlots, defineComponent } from 'vue'
+import { computed, defineComponent } from 'vue'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import type { ColumnConfig } from '../types/column'
 import type { PaginationConfig } from '../types/pagination'
@@ -39,8 +39,6 @@ const emit = defineEmits<{
   (e: 'action', event: string, row: any, index: number): void
   (e: 'pagination-change'): void
 }>()
-
-const slots = useSlots()
 
 /** 分离特殊功能列与普通数据列 */
 const selectionColumn = computed(() => props.columns.find((col) => col.type === 'selection'))
