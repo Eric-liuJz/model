@@ -27,13 +27,13 @@ const emit = defineEmits<{
 const currentPage = defineModel<number>('currentPage', { default: 1 })
 const pageSize = defineModel<number>('pageSize', { default: 20 })
 
-// 通过 Hooks 接管 UI 配置状态，保持 UI 层纯粹
-const { mergedConfig } = usePagination(toRef(props, 'config'))
-
-// 当翻页或变尺寸时，只单纯向上抛出通知，父组件想拦截就拦截
-const handleChange = () => {
-  emit('change')
-}
+// 通过 Hooks 接管 UI 配置状态与静默动作处理，保持 UI 层纯粹
+const { mergedConfig, handleSizeChange, handleCurrentChange } = usePagination(
+  toRef(props, 'config'),
+  currentPage,
+  pageSize,
+  () => emit('change')
+)
 </script>
 
 <template>
@@ -48,8 +48,8 @@ const handleChange = () => {
       :hide-on-single-page="mergedConfig.hideOnSinglePage"
       :small="mergedConfig.small"
       v-bind="mergedConfig"
-      @size-change="handleChange"
-      @current-change="handleChange"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
     />
   </div>
 </template>

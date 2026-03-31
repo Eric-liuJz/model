@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
 import type { ColumnConfig } from '../types/column'
+import type { TrackingFn } from '../types/telemetry'
 
 /**
  * 导出数据的列映射配置。
@@ -37,8 +38,12 @@ interface ExportColumnMap {
  * })
  * ```
  */
-export function useExport() {
+export interface UseExportOptions {
+  /** 静默埋点上报回调函数 */
+  track?: TrackingFn
+}
 
+export function useExport(exportHookOptions?: UseExportOptions) {
   /**
    * 从 ColumnConfig 中自动提取可导出的列映射。
    * 自动排除 selection、expand、action、index 等功能型列。
@@ -47,8 +52,8 @@ export function useExport() {
     const excludeTypes = new Set(['selection', 'expand', 'action', 'index'])
 
     return columns
-      .filter(col => !excludeTypes.has(col.type as string) && col.label)
-      .map(col => ({
+      .filter((col) => !excludeTypes.has(col.type as string) && col.label)
+      .map((col) => ({
         prop: String(col.prop),
         label: col.label!,
         formatter: buildFormatter(col)
@@ -61,7 +66,9 @@ export function useExport() {
    * - date 类型：格式化时间戳
    * - 其他类型：直接原样输出
    */
-  const buildFormatter = <T>(col: ColumnConfig<T>): ((value: any, row: any) => string) | undefined => {
+  const buildFormatter = <T>(
+    col: ColumnConfig<T>
+  ): ((value: any, row: any) => string) | undefined => {
     if (col.type === 'tag' && col.typeOptions) {
       const dict = col.typeOptions as Record<string, { text: string }>
       return (value: any) => {
@@ -97,23 +104,17 @@ export function useExport() {
     sheetName?: string
     columnMaps?: ExportColumnMap[]
   }): void => {
-    const {
-      columns,
-      data,
-      filename = 'export',
-      sheetName = 'Sheet1',
-      columnMaps
-    } = options
+    const { columns, data, filename = 'export', sheetName = 'Sheet1', columnMaps } = options
 
     // 1. 解析列映射
     const maps = columnMaps || resolveExportColumns(columns)
 
     // 2. 构建表头行
-    const headers = maps.map(m => m.label)
+    const headers = maps.map((m) => m.label)
 
     // 3. 构建数据行
-    const rows = data.map(row => {
-      return maps.map(m => {
+    const rows = data.map((row) => {
+      return maps.map((m) => {
         const rawValue = (row as any)[m.prop]
         return m.formatter ? m.formatter(rawValue, row) : (rawValue ?? '')
       })
@@ -125,10 +126,7 @@ export function useExport() {
 
     // 5. 自动列宽
     ws['!cols'] = maps.map((m, i) => {
-      const maxLen = Math.max(
-        m.label.length,
-        ...rows.map(r => String(r[i] ?? '').length)
-      )
+      const maxLen = Math.max(m.label.length, ...rows.map((r) => String(r[i] ?? '').length))
       return { wch: Math.min(Math.max(maxLen + 2, 10), 50) }
     })
 
@@ -137,6 +135,9 @@ export function useExport() {
 
     // 6. 触发下载
     XLSX.writeFile(wb, `${filename}.xlsx`)
+
+    // 7. 埋点上报
+    exportHookOptions?.track?.('export-trigger', { type: 'excel', filename })
   }
 
   return {

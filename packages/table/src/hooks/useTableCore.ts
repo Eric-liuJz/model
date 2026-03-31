@@ -106,7 +106,10 @@ export function useTableCore<T>(options: TableOptions<T>) {
    */
   const toggleColumnVisibility = (prop: string, isShow: boolean): void => {
     const state = columnStates.value.find((s) => s.prop === prop)
-    if (state) state.show = isShow
+    if (state) {
+      state.show = isShow
+      options.track?.('column-visibility', { prop, show: isShow })
+    }
   }
 
   /**
@@ -118,7 +121,10 @@ export function useTableCore<T>(options: TableOptions<T>) {
    */
   const pinColumn = (prop: string, direction: 'left' | 'right' | false): void => {
     const state = columnStates.value.find((s) => s.prop === prop)
-    if (state) state.fixed = direction
+    if (state) {
+      state.fixed = direction
+      options.track?.('column-pin', { prop, direction })
+    }
   }
 
   /**
@@ -133,6 +139,9 @@ export function useTableCore<T>(options: TableOptions<T>) {
     const [moved] = list.splice(oldIndex, 1)
     list.splice(newIndex, 0, moved)
     columnStates.value = list
+
+    // 拖拽完成时静默埋点
+    options.track?.('column-reorder', { prop: moved.prop, oldIndex, newIndex })
   }
 
   /**
@@ -141,6 +150,7 @@ export function useTableCore<T>(options: TableOptions<T>) {
    */
   const resetConfig = (): void => {
     columnStates.value = initStates.map((s) => ({ ...s }))
+    options.track?.('config-reset', {})
   }
 
   // ==========================================

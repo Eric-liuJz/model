@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import type { TrackingFn } from '@star-table/core'
 import { StarTable, TableToolbar, useTableCore, useExport } from '@star-table/core'
 import { ElMessage } from 'element-plus'
 import { mockTableData, basicColumnsConfig, type UserRow } from './config'
@@ -13,6 +14,11 @@ const displayData = computed(() => {
   return mockTableData.value.slice(start, start + pageSize.value)
 })
 
+// === 全局静默埋点探针 ===
+const trackLogger: TrackingFn = (event, payload) => {
+  console.log(`[埋点大盘] 触发了事件: ${event}`, payload)
+}
+
 // --- 1. 初始化状态引擎 ---
 const {
   visibleColumns,
@@ -23,7 +29,8 @@ const {
   resetConfig
 } = useTableCore<UserRow>({
   columns: basicColumnsConfig,
-  cacheKey: 'demo-user-table-v5'
+  cacheKey: 'demo-user-table-v5',
+  track: trackLogger
 })
 
 // --- 2. 事件处理 ---
@@ -45,7 +52,7 @@ const handleRefresh = () => {
 }
 
 // --- 3. 导出 Excel ---
-const { exportToExcel } = useExport()
+const { exportToExcel } = useExport({ track: trackLogger })
 const handleExport = () => {
   exportToExcel({
     columns: visibleColumns.value,
@@ -85,7 +92,7 @@ const handleExport = () => {
         row-key="id"
         :data="displayData"
         :columns="visibleColumns"
-        :pagination="true"
+        :pagination="{ pageSizes: [10, 20, 50, 100], track: trackLogger }"
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :total="mockTableData.length"

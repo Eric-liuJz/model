@@ -1,3 +1,5 @@
+import type { TrackingFn } from './telemetry'
+
 /**
  * 分页栏配置协议
  * 映射 Element Plus 的 el-pagination 参数
@@ -13,6 +15,8 @@ export interface PaginationConfig {
   hideOnSinglePage?: boolean
   /** 小型分页器，默认 false */
   small?: boolean
+  /** 静默埋点回调防侵入挂载点 */
+  track?: TrackingFn
   /** 回退类其他任意 el-pagination 支持的属性 */
   [key: string]: any
 }

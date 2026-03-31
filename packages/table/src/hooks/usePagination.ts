@@ -6,7 +6,12 @@ import type { PaginationConfig } from '../types/pagination'
  * 将复杂的默认值补全、数据合并等纯逻辑从 UI 组件中剥离，
  * 实现 UI 与逻辑的彻底解耦。
  */
-export function usePagination(configRef: Ref<boolean | PaginationConfig | undefined>) {
+export function usePagination(
+  configRef: Ref<boolean | PaginationConfig | undefined>,
+  currentPage: Ref<number>,
+  pageSize: Ref<number>,
+  onChange: () => void
+) {
   const mergedConfig = computed<PaginationConfig | null>(() => {
     const config = configRef.value
     if (!config) return null
@@ -27,7 +32,25 @@ export function usePagination(configRef: Ref<boolean | PaginationConfig | undefi
     return base
   })
 
+  const handleSizeChange = (val: number) => {
+    mergedConfig.value?.track?.('pagination-size-change', {
+      pageSize: val,
+      currentPage: currentPage.value
+    })
+    onChange()
+  }
+
+  const handleCurrentChange = (val: number) => {
+    mergedConfig.value?.track?.('pagination-current-change', {
+      currentPage: val,
+      pageSize: pageSize.value
+    })
+    onChange()
+  }
+
   return {
-    mergedConfig
+    mergedConfig,
+    handleSizeChange,
+    handleCurrentChange
   }
 }

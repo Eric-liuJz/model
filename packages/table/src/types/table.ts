@@ -1,5 +1,5 @@
 import type { ColumnConfig } from './column'
-
+import type { TrackingFn } from './telemetry'
 /**
  * 组件核心数据注入参数接口。
  * 作为 useTableCore 状态派生引擎的唯一入参协议。
@@ -31,4 +31,10 @@ export interface TableOptions<T = Record<string, any>> {
    *（包括可见性、固定方向、宽度偏移等用户偏好设置）。
    */
   cacheKey?: string
+
+  /**
+   * 静默埋点上报回调函数。
+   * 配置后底层交互（显示/固定/排序）将自动抛出。
+   */
+  track?: TrackingFn
 }

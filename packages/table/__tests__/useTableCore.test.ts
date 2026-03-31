@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { useTableCore } from '../src/hooks/useTableCore'
 import type { ColumnConfig } from '../src/types/column'
@@ -153,9 +153,44 @@ describe('useTableCore', () => {
     // 此时顺序: name, id, status, createTime, action
     reorderColumns(4, 2)
 
-    // 移动后顺序应为: name, id, action, status, createTime
+    //移动后顺序应为: name, id, action, status, createTime
     expect(columnStates.value[2].prop).toBe('action')
     expect(columnStates.value[3].prop).toBe('status')
     expect(columnStates.value[4].prop).toBe('createTime')
+  })
+
+  describe('静默埋点追踪行为 (Telemetry Tracking)', () => {
+    it('执行各项配置指令时应该触发对应的 track 回调', () => {
+      const columns = createMockColumns()
+      const trackLogger = vi.fn()
+      const { toggleColumnVisibility, pinColumn, reorderColumns, resetConfig } =
+        useTableCore<MockRow>({
+          columns,
+          track: trackLogger
+        })
+
+      // 测试显示/隐藏列
+      toggleColumnVisibility('id', false)
+      expect(trackLogger).toHaveBeenCalledWith('column-visibility', { prop: 'id', show: false })
+
+      // 测试固定列
+      pinColumn('name', 'left')
+      expect(trackLogger).toHaveBeenCalledWith('column-pin', { prop: 'name', direction: 'left' })
+
+      // 测试排序转移 - 移动索引0到2，也就是移动'id'
+      reorderColumns(0, 2)
+      expect(trackLogger).toHaveBeenCalledWith('column-reorder', {
+        prop: 'id',
+        oldIndex: 0,
+        newIndex: 2
+      })
+
+      // 测试重置
+      resetConfig()
+      expect(trackLogger).toHaveBeenCalledWith('config-reset', {})
+
+      // 验证触发总次数
+      expect(trackLogger).toHaveBeenCalledTimes(4)
+    })
   })
 })

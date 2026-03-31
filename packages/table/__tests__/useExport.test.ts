@@ -17,22 +17,21 @@ vi.mock('xlsx', () => {
 })
 
 describe('useExport', () => {
-
   const { resolveExportColumns, exportToExcel } = useExport()
 
   const mockColumns: ColumnConfig<any>[] = [
     { prop: 'selection', type: 'selection' },
     { prop: 'index', type: 'index', label: '序号' },
     { prop: 'name', label: '姓名', type: 'text' },
-    { 
-      prop: 'role', 
-      label: '角色', 
-      type: 'tag', 
+    {
+      prop: 'role',
+      label: '角色',
+      type: 'tag',
       typeOptions: { '1': { text: '管理员' }, '2': { text: '普通用户' } }
     },
-    { 
-      prop: 'joinDate', 
-      label: '加入时间', 
+    {
+      prop: 'joinDate',
+      label: '加入时间',
       type: 'date',
       typeOptions: { format: 'YYYY/MM/DD' }
     },
@@ -41,15 +40,15 @@ describe('useExport', () => {
 
   it('resolveExportColumns 应当自动排除功能列并保留数据列', () => {
     const maps = resolveExportColumns(mockColumns)
-    
+
     // selection, index, action 应该被过滤掉
     expect(maps).toHaveLength(3)
-    const props = maps.map(m => m.prop)
-    
+    const props = maps.map((m) => m.prop)
+
     expect(props).toContain('name')
     expect(props).toContain('role')
     expect(props).toContain('joinDate')
-    
+
     expect(props).not.toContain('selection')
     expect(props).not.toContain('index')
     expect(props).not.toContain('action')
@@ -57,27 +56,27 @@ describe('useExport', () => {
 
   it('构建的 formatter 应当能正确翻译 tag 字典', () => {
     const maps = resolveExportColumns(mockColumns)
-    const roleMap = maps.find(m => m.prop === 'role')
-    
+    const roleMap = maps.find((m) => m.prop === 'role')
+
     expect(roleMap?.formatter).toBeDefined()
-    
+
     // 测试字典映射值
     expect(roleMap!.formatter!('1', {})).toBe('管理员')
     expect(roleMap!.formatter!('2', {})).toBe('普通用户')
-    
+
     // 测试未知值回退
     expect(roleMap!.formatter!('999', {})).toBe('999')
   })
 
   it('构建的 formatter 应当能正确格式化 date 日期', () => {
     const maps = resolveExportColumns(mockColumns)
-    const dateMap = maps.find(m => m.prop === 'joinDate')
-    
+    const dateMap = maps.find((m) => m.prop === 'joinDate')
+
     expect(dateMap?.formatter).toBeDefined()
-    
+
     const timestamp = 1711868400000 // 某个绝对时间戳
     const expected = dayjs(timestamp).format('YYYY/MM/DD')
-    
+
     expect(dateMap!.formatter!(timestamp, {})).toBe(expected)
     // 判空处理
     expect(dateMap!.formatter!(null, {})).toBe('')
@@ -97,11 +96,30 @@ describe('useExport', () => {
 
     // 验证 aoa_to_sheet 被调用（即数据组装）
     expect(XLSX.utils.aoa_to_sheet).toHaveBeenCalled()
-    
+
     // 验证 append sheet
     expect(XLSX.utils.book_append_sheet).toHaveBeenCalled()
 
     // 验证 writeFile 被调用并带上了正确的文件名
     expect(XLSX.writeFile).toHaveBeenCalledWith(expect.any(Object), '测试导出.xlsx')
+  })
+
+  it('如果配置了 track，则在成功导出时应该静默触发 telemetry 事件', () => {
+    const trackLogger = vi.fn()
+    const { exportToExcel: exportWithTrack } = useExport({ track: trackLogger })
+
+    const mockData = [{ name: 'Test' }]
+
+    exportWithTrack({
+      columns: mockColumns,
+      data: mockData,
+      filename: '日志测试导出'
+    })
+
+    expect(trackLogger).toHaveBeenCalledTimes(1)
+    expect(trackLogger).toHaveBeenCalledWith('export-trigger', {
+      type: 'excel',
+      filename: '日志测试导出'
+    })
   })
 })
