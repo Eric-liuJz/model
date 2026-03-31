@@ -1,0 +1,53 @@
+/* 全局样式覆盖 */
+body, html, #app {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  background-color: #f5f7fa;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.layout-container {
+  height: 100vh;
+}
+
+.aside {
+  background-color: #ffffff;
+  border-right: 1px solid #e1e4e8;
+  display: flex;
+  flex-direction: column;
+
+  .logo {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2f3d;
+    border-bottom: 1px solid #ebeef5;
+  }
+
+  .menu {
+    flex: 1;
+    border-right: none;
+  }
+}
+
+.main-content {
+  padding: 0;
+  background-color: #f5f7fa;
+  overflow-y: auto;
+}
+
+/* 简单的路由过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
