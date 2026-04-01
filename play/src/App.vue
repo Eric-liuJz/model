@@ -26,6 +26,10 @@ const route = useRoute()
           <el-icon><Grid /></el-icon>
           <span>Table V2</span>
         </el-menu-item>
+        <el-menu-item index="/v2-remote">
+          <el-icon><Connection /></el-icon>
+          <span>Table V2 Remote</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -42,13 +46,14 @@ const route = useRoute()
 
 <script lang="ts">
 // 注册图标
-import { Odometer, Menu as IconMenu, DataLine, Grid } from '@element-plus/icons-vue'
+import { Odometer, Menu as IconMenu, DataLine, Grid, Connection } from '@element-plus/icons-vue'
 export default {
   components: {
     Odometer,
     IconMenu,
     DataLine,
-    Grid
+    Grid,
+    Connection
   }
 }
 </script>

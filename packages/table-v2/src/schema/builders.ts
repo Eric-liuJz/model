@@ -66,13 +66,11 @@ export function linkColumn<T>(
 /**
  * 创建操作列。
  *
- * 如果没有显式传 `key`，默认使用 `'action'`。
+ * 由于操作列经常需要参与列设置持久化与运行时身份识别，
+ * v2 要求显式传入稳定的 `key`，避免多个操作列误用同一个默认 key。
  */
-export function actionColumn<T>(
-  config: Omit<ActionColumn<T>, 'kind' | 'key'> & { key?: string }
-): ActionColumn<T> {
-  const { key = 'action', title = '操作', ...rest } = config
-  return { kind: 'action', key, title, ...rest }
+export function actionColumn<T>(config: Omit<ActionColumn<T>, 'kind'>): ActionColumn<T> {
+  return { kind: 'action', ...config }
 }
 
 /**

@@ -58,7 +58,7 @@ const columns = computed<Column<any>[]>(
     // 把 controller 产出的 ResolvedColumn 映射成 el-table-v2 可消费的列定义。
     table.columns.value
       .filter((column) => !['selection', 'expand'].includes(column.kind))
-      .map((column) => ({
+      .map((column, index) => ({
         key: column.key,
         dataKey: column.key,
         title: column.title,
@@ -67,7 +67,7 @@ const columns = computed<Column<any>[]>(
           column.fixed === 'left' ? true : column.fixed === 'right' ? ('right' as any) : undefined,
         sortable: !!column.sortable,
         align: column.align ?? 'left',
-        headerCellRenderer: () => column.renderHeaderContent(0),
+        headerCellRenderer: () => column.renderHeaderContent(index),
         cellRenderer: ({
           rowData,
           rowIndex

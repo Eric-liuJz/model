@@ -11,7 +11,7 @@
   /* 稍微加一点极简的呼吸感和玻璃边距，让它不至于贴着表格太死板 */
   padding: 8px 0;
 
-  :deep(.el-pagination) {
+  .el-pagination {
     --el-pagination-bg-color: transparent;
 
     .btn-prev,

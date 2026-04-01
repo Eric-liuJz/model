@@ -1,15 +1,19 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useTableContext } from '../../core/context'
 import { VNodeRenderer } from '../../core/VNodeRenderer'
 
 const table = useTableContext<T>()
+const tableRef = ref<{ clearSelection?: () => void } | null>(null)
 const rows = computed(() => table.rows.value)
 const controllerSortingEnabled = computed(() => !!table.state.sorting?.enabled)
+const selectionState = computed(() => table.state.selection)
 
 const expandColumn = computed(() => table.columns.value.find((column) => column.kind === 'expand'))
 const selectionColumn = computed(() =>
-  table.columns.value.find((column) => column.kind === 'selection')
+  selectionState.value?.enabled
+    ? table.columns.value.find((column) => column.kind === 'selection')
+    : undefined
 )
 const dataColumns = computed(() =>
   table.columns.value.filter((column) => !['expand', 'selection'].includes(column.kind))
@@ -22,10 +26,21 @@ function resolveSortable(
   if (!sortable) return false
   return sortingEnabled ? 'custom' : sortable
 }
+
+watch(
+  () => selectionState.value?.keys.value ?? [],
+  (keys) => {
+    if (keys.length === 0) {
+      tableRef.value?.clearSelection?.()
+    }
+  },
+  { flush: 'post' }
+)
 </script>
 
 <template>
   <el-table
+    ref="tableRef"
     :data="rows"
     :row-key="typeof table.rowKey === 'function' ? (table.getRowId as any) : table.rowKey"
     border
@@ -37,6 +52,7 @@ function resolveSortable(
       type="selection"
       :width="selectionColumn.width ?? 55"
       :fixed="selectionColumn.fixed || false"
+      :selectable="selectionColumn.selectable"
     />
 
     <el-table-column

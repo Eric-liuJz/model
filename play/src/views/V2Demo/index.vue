@@ -94,6 +94,7 @@ const columns = defineColumns<UserRow>([
     text: ({ row }) => `${row.name} 的主页`
   }),
   actionColumn<UserRow>({
+    key: 'actions',
     title: '操作',
     width: 180,
     fixed: 'right',

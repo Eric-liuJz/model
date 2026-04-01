@@ -12,6 +12,7 @@ defineEmits<{
 
 const drawerVisible = ref(false)
 const states = table.state.columnSettings?.columns
+const exportState = computed(() => table.state.export)
 const visibleCount = computed(() => states?.value.filter((column) => column.visible).length ?? 0)
 const sortableListRef = ref<HTMLElement | null>(null)
 let sortableInstance: Sortable | null = null
@@ -64,7 +65,7 @@ onBeforeUnmount(() => {
       <slot name="right" />
       <el-tooltip content="导出 Excel" placement="top">
         <el-button
-          v-if="table.actions.exportXlsx"
+          v-if="exportState?.enabled && exportState.available"
           :icon="Download"
           circle
           size="small"

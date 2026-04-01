@@ -211,6 +211,7 @@ export interface ActionColumn<T> extends BaseColumn<T, 'action'> {
 /**
  * 勾选列。
  *
+ * 需要同时启用 `features.selection` 才会真正生效。
  * 标准表格 adapter 会渲染为底层 selection 列；
  * 虚拟表格 adapter 当前不会启用对应原生能力。
  */
