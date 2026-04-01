@@ -41,6 +41,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "@vueuse/core": "^14.2.1",
     "dayjs": "^1.11.20",
+    "sortablejs": "^1.15.7",
     "xlsx": "^0.18.5"
   }
 }

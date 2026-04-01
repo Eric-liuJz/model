@@ -1,21 +1,58 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Setting, RefreshRight, Download } from '@element-plus/icons-vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { Download, Rank, RefreshRight, Setting } from '@element-plus/icons-vue'
+import Sortable from 'sortablejs'
 import { useTableContext } from '../../core/context'
 
 const table = useTableContext<any>()
+
 defineEmits<{
   (e: 'refresh'): void
 }>()
+
 const drawerVisible = ref(false)
-
 const states = table.state.columnSettings?.columns
+const visibleCount = computed(() => states?.value.filter((column) => column.visible).length ?? 0)
+const sortableListRef = ref<HTMLElement | null>(null)
+let sortableInstance: Sortable | null = null
 
-function cycleFixed(current: 'left' | 'right' | false) {
-  if (current === false) return 'left'
-  if (current === 'left') return 'right'
-  return false
+const fixedOptions = [
+  { label: '自由布局', value: false },
+  { label: '左侧固定', value: 'left' },
+  { label: '右侧固定', value: 'right' }
+] as const
+
+function initSortable() {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+    sortableInstance = null
+  }
+
+  const element = sortableListRef.value
+  if (!element) return
+
+  sortableInstance = Sortable.create(element, {
+    animation: 180,
+    handle: '.drag-handle',
+    ghostClass: 'column-setting-ghost',
+    chosenClass: 'column-setting-chosen',
+    dragClass: 'column-setting-dragging',
+    onEnd: ({ oldIndex, newIndex }) => {
+      if (oldIndex == null || newIndex == null || oldIndex === newIndex) return
+      table.actions.reorderColumn(oldIndex, newIndex)
+    }
+  })
 }
+
+watch(drawerVisible, async (visible) => {
+  if (!visible) return
+  await nextTick()
+  initSortable()
+})
+
+onBeforeUnmount(() => {
+  sortableInstance?.destroy()
+})
 </script>
 
 <template>
@@ -52,57 +89,72 @@ function cycleFixed(current: 'left' | 'right' | false) {
   <el-drawer
     v-if="states"
     v-model="drawerVisible"
-    title="列设置"
     direction="rtl"
-    size="360px"
+    size="420px"
     :append-to-body="true"
+    class="star-table-column-drawer"
   >
     <template #header>
       <div class="drawer-header">
-        <span class="drawer-title">列设置</span>
+        <div class="drawer-header-main">
+          <span class="drawer-title">列设置</span>
+          <p class="drawer-subtitle">管理列显示、固定方式与展示顺序</p>
+        </div>
         <el-button type="primary" link size="small" @click="table.actions.resetColumns()">
           重置默认
         </el-button>
       </div>
     </template>
 
-    <div class="column-setting-list">
-      <div v-for="(column, index) in states" :key="column.key" class="column-setting-item">
-        <el-checkbox
-          :model-value="column.visible"
-          @change="
-            (value: boolean | string | number) =>
-              table.actions.toggleColumnVisibility(column.key, !!value)
-          "
+    <div class="column-setting-panel">
+      <div class="panel-summary">
+        <div>
+          <span class="summary-value">{{ visibleCount }}</span>
+          <span class="summary-label"> / {{ states.length }} 列可见</span>
+        </div>
+        <span class="summary-tip">切换显隐后立即生效</span>
+      </div>
+
+      <div ref="sortableListRef" class="column-setting-list">
+        <div
+          v-for="column in states"
+          :key="column.key"
+          class="column-setting-item"
+          :class="{ 'is-hidden': !column.visible }"
         >
-          {{ column.title }}
-        </el-checkbox>
-        <div class="column-actions">
-          <el-button
-            link
-            size="small"
-            @click="table.actions.pinColumn(column.key, cycleFixed(column.fixed))"
-          >
-            {{
-              column.fixed === 'left' ? '左固定' : column.fixed === 'right' ? '右固定' : '不固定'
-            }}
-          </el-button>
-          <el-button
-            link
-            size="small"
-            :disabled="index === 0"
-            @click="table.actions.reorderColumn(index, index - 1)"
-          >
-            上移
-          </el-button>
-          <el-button
-            link
-            size="small"
-            :disabled="index === states.length - 1"
-            @click="table.actions.reorderColumn(index, index + 1)"
-          >
-            下移
-          </el-button>
+          <div class="item-main">
+            <button type="button" class="drag-handle" aria-label="拖拽调整列顺序">
+              <el-icon><Rank /></el-icon>
+            </button>
+            <el-checkbox
+              :model-value="column.visible"
+              class="column-checkbox"
+              @change="
+                (value: boolean | string | number) =>
+                  table.actions.toggleColumnVisibility(column.key, !!value)
+              "
+            >
+              <span class="column-title">{{ column.title }}</span>
+            </el-checkbox>
+          </div>
+
+          <div class="column-actions">
+            <el-select
+              class="fixed-select"
+              size="small"
+              :model-value="column.fixed"
+              @update:model-value="
+                (value: 'left' | 'right' | false) => table.actions.pinColumn(column.key, value)
+              "
+            >
+              <el-option
+                v-for="option in fixedOptions"
+                :key="String(option.value)"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </div>
         </div>
       </div>
     </div>

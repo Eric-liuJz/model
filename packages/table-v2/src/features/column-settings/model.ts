@@ -36,7 +36,16 @@ export function createColumnSettingsFeature<T>(
   // 1. 保留仍然存在的旧列，尽量延续用户的排序和显隐偏好
   // 2. 将 schema 中新增的列补回状态表，避免新列永久不可见
   const ordered = states.value
-  const reconciled = ordered.filter((state) => columns.some((column) => column.key === state.key))
+  const reconciled = ordered
+    .filter((state) => columns.some((column) => column.key === state.key))
+    .map((state) => {
+      const currentColumn = columns.find((column) => column.key === state.key)
+      return {
+        ...state,
+        // 标题始终回收最新 schema，避免旧缓存把内部 key 暴露到 UI。
+        title: currentColumn?.title ?? state.title
+      }
+    })
 
   columns.forEach((column) => {
     if (!reconciled.some((state) => state.key === column.key)) {

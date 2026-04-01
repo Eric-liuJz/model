@@ -1,3 +1,5 @@
+import './styles/index.scss'
+
 export { createStarTable } from './core/createStarTable'
 export { useTableContext } from './core/context'
 

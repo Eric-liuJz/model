@@ -71,8 +71,8 @@ export function linkColumn<T>(
 export function actionColumn<T>(
   config: Omit<ActionColumn<T>, 'kind' | 'key'> & { key?: string }
 ): ActionColumn<T> {
-  const { key = 'action', ...rest } = config
-  return { kind: 'action', key, ...rest }
+  const { key = 'action', title = '操作', ...rest } = config
+  return { kind: 'action', key, title, ...rest }
 }
 
 /**
@@ -83,7 +83,7 @@ export function actionColumn<T>(
 export function selectionColumn<T>(
   config: Omit<SelectionColumn<T>, 'kind' | 'key'> = {}
 ): SelectionColumn<T> {
-  return { kind: 'selection', key: '__selection__', ...config }
+  return { kind: 'selection', key: '__selection__', title: '勾选', ...config }
 }
 
 /**
@@ -92,7 +92,7 @@ export function selectionColumn<T>(
  * 如果没有显式传 `key`，默认使用内部保留值 `__index__`。
  */
 export function indexColumn<T>(config: Omit<IndexColumn<T>, 'kind' | 'key'> = {}): IndexColumn<T> {
-  return { kind: 'index', key: '__index__', ...config }
+  return { kind: 'index', key: '__index__', title: '序号', ...config }
 }
 
 /**
@@ -103,6 +103,6 @@ export function indexColumn<T>(config: Omit<IndexColumn<T>, 'kind' | 'key'> = {}
 export function expandColumn<T>(
   config: Omit<ExpandColumn<T>, 'kind' | 'key'> & { key?: string }
 ): ExpandColumn<T> {
-  const { key = '__expand__', ...rest } = config
-  return { kind: 'expand', key, ...rest }
+  const { key = '__expand__', title = '展开', ...rest } = config
+  return { kind: 'expand', key, title, ...rest }
 }
