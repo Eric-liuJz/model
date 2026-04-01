@@ -3,8 +3,10 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client"],
+    "baseUrl": ".",
     "paths": {
-      "@star-table/core": ["../packages/table/src/index.ts"]
+      "@star-table/core": ["../packages/table/src/index.ts"],
+      "@star-table/table-v2": ["../packages/table-v2/src/index.ts"]
     },
 
     /* Linting */

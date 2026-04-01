@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "pnpm --filter play dev",
     "build": "pnpm --filter @star-table/core build",
+    "build:v2": "pnpm --filter @star-table/table-v2 build",
     "lint": "eslint . --fix",
     "typecheck": "tsc --noEmit --composite false",
     "prepare": "husky"

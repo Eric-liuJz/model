@@ -12,6 +12,11 @@ const router = createRouter({
       path: '/virtual',
       name: 'VirtualDemo',
       component: () => import('../views/VirtualDemo/index.vue')
+    },
+    {
+      path: '/v2',
+      name: 'V2Demo',
+      component: () => import('../views/V2Demo/index.vue')
     }
   ]
 })

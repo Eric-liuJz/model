@@ -1,0 +1,46 @@
+{
+  "name": "@star-table/table-v2",
+  "version": "0.1.0",
+  "description": "The next-generation Star Table package built around a controller-first architecture.",
+  "main": "dist/star-table-v2.umd.js",
+  "module": "dist/star-table-v2.es.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/star-table-v2.es.js",
+      "require": "./dist/star-table-v2.umd.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./dist/style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vue-tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "element-plus": "^2.6.0",
+    "vue": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/sortablejs": "^1.15.9",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^20.8.9",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^1.6.1",
+    "vue-tsc": "^2.0.0"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@vueuse/core": "^14.2.1",
+    "dayjs": "^1.11.20",
+    "xlsx": "^0.18.5"
+  }
+}

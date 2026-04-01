@@ -10,6 +10,10 @@ export default defineConfig({
       {
         find: /^@star-table\/core$/,
         replacement: fileURLToPath(new URL('../packages/table/src/index.ts', import.meta.url))
+      },
+      {
+        find: /^@star-table\/table-v2$/,
+        replacement: fileURLToPath(new URL('../packages/table-v2/src/index.ts', import.meta.url))
       }
     ]
   }

@@ -22,6 +22,10 @@ const route = useRoute()
           <el-icon><DataLine /></el-icon>
           <span>虚拟列表 (WIP)</span>
         </el-menu-item>
+        <el-menu-item index="/v2">
+          <el-icon><Grid /></el-icon>
+          <span>Table V2</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -38,12 +42,13 @@ const route = useRoute()
 
 <script lang="ts">
 // 注册图标
-import { Odometer, Menu as IconMenu, DataLine } from '@element-plus/icons-vue'
+import { Odometer, Menu as IconMenu, DataLine, Grid } from '@element-plus/icons-vue'
 export default {
   components: {
     Odometer,
     IconMenu,
-    DataLine
+    DataLine,
+    Grid
   }
 }
 </script>
