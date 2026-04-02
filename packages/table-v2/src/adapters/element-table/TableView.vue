@@ -11,6 +11,8 @@ const tableRef = ref<{
 const rows = computed(() => table.rows.value)
 const controllerSortingEnabled = computed(() => !!table.state.sorting?.enabled)
 const selectionState = computed(() => table.state.selection)
+const appliedVisibleSelectionKeys = ref<Array<string | number>>([])
+const appliedVisibleRowMap = ref(new Map<string | number, T>())
 
 const expandColumn = computed(() => table.columns.value.find((column) => column.kind === 'expand'))
 const selectionColumn = computed(() =>
@@ -40,16 +42,41 @@ watch(
     if (!instance) return
 
     const keySet = new Set(keys)
+    const nextVisibleRowMap = new Map(visibleRows.map((row) => [table.getRowId(row), row]))
+    const nextVisibleSelectedKeys = visibleRows
+      .map((row) => table.getRowId(row))
+      .filter((key) => keySet.has(key))
+    const rowsChanged =
+      appliedVisibleRowMap.value.size !== nextVisibleRowMap.size ||
+      visibleRows.some((row) => appliedVisibleRowMap.value.get(table.getRowId(row)) !== row)
 
-    instance.clearSelection?.()
+    if (nextVisibleSelectedKeys.length === 0) {
+      instance.clearSelection?.()
+    } else if (rowsChanged || !instance.toggleRowSelection) {
+      // 数据源对象替换后，底层表格可能已经丢失内部选中态，这里回退到一次完整同步。
+      instance.clearSelection?.()
+      nextVisibleSelectedKeys.forEach((key) => {
+        const row = nextVisibleRowMap.get(key)
+        if (row) {
+          instance.toggleRowSelection?.(row, true)
+        }
+      })
+    } else {
+      const previousKeySet = new Set(appliedVisibleSelectionKeys.value)
 
-    if (keySet.size === 0 || !instance.toggleRowSelection) return
+      visibleRows.forEach((row) => {
+        const key = table.getRowId(row)
+        const wasSelected = previousKeySet.has(key)
+        const shouldSelect = keySet.has(key)
 
-    visibleRows.forEach((row) => {
-      if (keySet.has(table.getRowId(row))) {
-        instance.toggleRowSelection?.(row, true)
-      }
-    })
+        if (wasSelected !== shouldSelect) {
+          instance.toggleRowSelection?.(row, shouldSelect)
+        }
+      })
+    }
+
+    appliedVisibleSelectionKeys.value = nextVisibleSelectedKeys
+    appliedVisibleRowMap.value = nextVisibleRowMap
   },
   { flush: 'post' }
 )

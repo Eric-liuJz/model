@@ -1,21 +1,25 @@
-import { computed, ref, shallowRef, toValue, watch } from 'vue'
+import { computed, toValue } from 'vue'
 import type {
   CreateRemoteStarTableOptions,
   CreateStarTableOptions,
-  TableController,
-  TableGetDataParams,
-  TableGetDataResult,
-  TableRemoteLoadContext,
-  RemoteLoadStatus
+  TableController
 } from '../types'
 import { createColumnRuntime } from './createColumnRuntime'
+import { createRemoteDataFeature } from './createRemoteDataFeature'
 import { createActionChannel } from './events'
 import { createColumnSettingsFeature } from '../features/column-settings/model'
 import { exportTableToXlsx } from '../features/export/model'
-import { createPaginationFeature } from '../features/pagination/model'
+import { createPaginationFeature, sanitizePositiveInt } from '../features/pagination/model'
 import { createSelectionFeature } from '../features/selection/model'
 import { createSortingFeature } from '../features/sorting/model'
 import type { TableColumn } from '../types'
+
+const DEFAULT_VIEW_OPTIONS = {
+  mode: 'table' as const,
+  fill: true,
+  minHeight: 320,
+  loadingText: '加载中'
+}
 
 function compareValues(left: unknown, right: unknown) {
   if (left == null && right == null) return 0
@@ -34,18 +38,16 @@ function isRemoteOptions<T>(
 function resolveViewOptions(view: CreateStarTableOptions<unknown>['view']) {
   if (!view || typeof view === 'string') {
     return {
-      mode: view ?? 'table',
-      fill: true,
-      minHeight: 320,
-      loadingText: '加载中'
+      ...DEFAULT_VIEW_OPTIONS,
+      mode: view ?? DEFAULT_VIEW_OPTIONS.mode
     } as const
   }
 
   return {
-    mode: view.mode ?? 'table',
-    fill: view.fill ?? true,
-    minHeight: view.minHeight ?? 320,
-    loadingText: view.loadingText ?? '加载中'
+    mode: view.mode ?? DEFAULT_VIEW_OPTIONS.mode,
+    fill: view.fill ?? DEFAULT_VIEW_OPTIONS.fill,
+    minHeight: view.minHeight ?? DEFAULT_VIEW_OPTIONS.minHeight,
+    loadingText: view.loadingText ?? DEFAULT_VIEW_OPTIONS.loadingText
   } as const
 }
 
@@ -63,19 +65,6 @@ function assertUniqueColumnKeys<T>(columns: TableColumn<T>[]) {
   })
 }
 
-async function invokeRemoteHook<Args extends unknown[]>(
-  hook: ((...args: Args) => void | Promise<void>) | undefined,
-  ...args: Args
-) {
-  if (!hook) return
-
-  try {
-    await hook(...args)
-  } catch {
-    // 生命周期钩子用于埋点、日志和外围联动，不应反向影响主请求结果。
-  }
-}
-
 export function createStarTable<T>(options: CreateStarTableOptions<T>): TableController<T> {
   assertUniqueColumnKeys(options.columns)
   const viewOptions = resolveViewOptions(options.view)
@@ -90,18 +79,8 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
 
   // 本地模式直接消费外部数据源；远程模式则由 controller 维护最近一次请求结果。
   const localRowsInput = computed<T[]>(() => (remoteMode ? [] : (toValue(options.data) as T[])))
-  const remoteRows = shallowRef<T[]>([])
-  const remoteTotal = ref(0)
-  const remoteLoading = ref(false)
-  const remoteStatus = ref<RemoteLoadStatus>('idle')
-  const remoteError = ref<unknown | null>(null)
-  const remoteLastUpdatedAt = ref<number | null>(null)
-  const remoteHasLoadedFlag = ref(false)
-  const remoteQuery = computed<Record<string, unknown>>(() =>
-    remoteMode ? { ...(toValue(options.query ?? {}) as Record<string, unknown>) } : {}
-  )
-  const remoteConfig = remoteMode ? (options.remote ?? {}) : undefined
-  const paginationCanClamp = computed(() => !remoteMode || remoteHasLoadedFlag.value)
+  const remoteFeature = remoteMode ? createRemoteDataFeature(options) : undefined
+  const paginationCanClamp = computed(() => !remoteMode || !!remoteFeature?.hasLoadedFlag.value)
 
   const sorting = createSortingFeature(options.features?.sorting)
   const hasPaginationFeature = !!options.features?.pagination
@@ -114,7 +93,9 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
         available: !remoteMode || !hasPaginationFeature || exportConfig?.scope === 'current'
       }
     : undefined
-  const totalSource = computed(() => (remoteMode ? remoteTotal.value : localRowsInput.value.length))
+  const totalSource = computed(() =>
+    remoteMode ? (remoteFeature?.total.value ?? 0) : localRowsInput.value.length
+  )
   const pagination = createPaginationFeature(
     totalSource,
     options.features?.pagination,
@@ -140,133 +121,20 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
     key: sorting?.key.value ?? null,
     order: sorting?.order.value ?? null
   }))
-  const querySignature = computed(() => JSON.stringify(remoteQuery.value))
-  let requestSequence = 0
 
-  const buildGetDataParams = (): TableGetDataParams => ({
-    page: requestPage.value,
-    pageSize: requestPageSize.value,
-    sort: requestSort.value,
-    query: remoteQuery.value
-  })
-
-  async function loadRemoteData(manual = false) {
-    if (!remoteMode) return
-
-    const currentRequest = ++requestSequence
-    const params = buildGetDataParams()
-    const keepPreviousData = remoteConfig?.keepPreviousData ?? true
-
-    if (!keepPreviousData) {
-      remoteRows.value = []
-      remoteTotal.value = 0
-    }
-
-    remoteLoading.value = true
-    remoteStatus.value = 'loading'
-    remoteError.value = null
-
-    let finalStatus: RemoteLoadStatus = 'loading'
-    let finalResult: TableGetDataResult<T> | null = null
-    let finalError: unknown | null = null
-    let currentRequestFinished = false
-
-    const markRequestFinished = () => {
-      if (currentRequest !== requestSequence || currentRequestFinished) return false
-      remoteLoading.value = false
-      remoteHasLoadedFlag.value = true
-      currentRequestFinished = true
-      return true
-    }
-
-    try {
-      await invokeRemoteHook(remoteConfig?.onBeforeLoad, params)
-      const result = await options.getData(params)
-      if (currentRequest !== requestSequence) return
-
-      remoteRows.value = result.rows
-      remoteTotal.value = result.total
-      remoteLastUpdatedAt.value = Date.now()
-      remoteStatus.value = 'success'
-      finalStatus = 'success'
-      finalResult = result
-
-      const successContext: TableRemoteLoadContext<T> = {
-        requestId: currentRequest,
-        params,
-        manual,
-        status: 'success',
-        result,
-        error: null
-      }
-
-      markRequestFinished()
-      await invokeRemoteHook(remoteConfig?.onLoadSuccess, result, params, successContext)
-    } catch (error) {
-      if (currentRequest !== requestSequence) return
-      remoteError.value = error
-      remoteStatus.value = 'error'
-      finalStatus = 'error'
-      finalError = error
-
-      const errorContext: TableRemoteLoadContext<T> = {
-        requestId: currentRequest,
-        params,
-        manual,
-        status: 'error',
-        result: null,
-        error
-      }
-
-      markRequestFinished()
-      await invokeRemoteHook(remoteConfig?.onLoadError, error, params, errorContext)
-    } finally {
-      markRequestFinished()
-
-      if (currentRequest === requestSequence) {
-        const finalContext: TableRemoteLoadContext<T> = {
-          requestId: currentRequest,
-          params,
-          manual,
-          status: finalStatus,
-          result: finalResult,
-          error: finalError
-        }
-        await invokeRemoteHook(remoteConfig?.onLoadFinally, finalContext)
-      }
-    }
-  }
-
-  if (remoteMode) {
-    watch(
-      querySignature,
-      () => {
-        if (pagination && pagination.currentPage.value !== 1) {
-          pagination.currentPage.value = 1
-        }
-      },
-      { flush: 'sync' }
-    )
-
-    watch(
-      [
-        requestPage,
-        requestPageSize,
-        () => requestSort.value.key,
-        () => requestSort.value.order,
-        querySignature
-      ],
-      () => {
-        void loadRemoteData(false)
-      },
-      { immediate: remoteConfig?.immediate ?? true }
-    )
+  if (remoteFeature) {
+    remoteFeature.bindAutoLoad({
+      requestPage,
+      requestPageSize,
+      requestSort,
+      currentPage: pagination?.currentPage
+    })
   }
 
   // 排序属于 controller 的派生能力，而不是 adapter 的职责。
   // 本地模式在这里做排序；远程模式则把排序意图交给 getData。
   const allRows = computed<T[]>(() => {
-    if (remoteMode) return remoteRows.value
+    if (remoteMode) return remoteFeature?.rows.value ?? []
 
     const rows = [...localRowsInput.value]
     const sortingKey = sorting?.key.value
@@ -286,7 +154,7 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
   })
 
   const rows = computed<T[]>(() => {
-    if (remoteMode) return remoteRows.value
+    if (remoteMode) return remoteFeature?.rows.value ?? []
     if (!pagination) return allRows.value
 
     const start = (pagination.currentPage.value - 1) * pagination.pageSize.value
@@ -304,7 +172,7 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
     rowKey,
     getRowId,
     schema: options.columns,
-    data: computed(() => (remoteMode ? remoteRows.value : localRowsInput.value)),
+    data: computed(() => (remoteMode ? (remoteFeature?.rows.value ?? []) : localRowsInput.value)),
     allRows,
     rows,
     columns,
@@ -314,38 +182,16 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
       export: exportState,
       selection,
       sorting,
-      remote: remoteMode
-        ? {
-            enabled: true,
-            status: remoteStatus,
-            loading: remoteLoading,
-            error: remoteError,
-            rows: remoteRows,
-            total: remoteTotal,
-            query: remoteQuery,
-            lastUpdatedAt: remoteLastUpdatedAt,
-            hasLoaded: computed(() => remoteHasLoadedFlag.value),
-            isReloading: computed(() => remoteLoading.value && remoteHasLoadedFlag.value),
-            isEmpty: computed(
-              () =>
-                remoteHasLoadedFlag.value &&
-                !remoteLoading.value &&
-                !remoteError.value &&
-                remoteRows.value.length === 0
-            ),
-            immediate: remoteConfig?.immediate ?? true,
-            keepPreviousData: remoteConfig?.keepPreviousData ?? true
-          }
-        : undefined
+      remote: remoteFeature?.state
     },
     actions: {
       setPage(page) {
         if (!pagination) return
-        pagination.currentPage.value = Math.max(page, 1)
+        pagination.currentPage.value = sanitizePositiveInt(page, 1)
       },
       setPageSize(pageSize) {
         if (!pagination) return
-        pagination.pageSize.value = pageSize
+        pagination.pageSize.value = sanitizePositiveInt(pageSize, pagination.pageSize.value)
         pagination.currentPage.value = 1
       },
       toggleColumnVisibility(key, visible) {
@@ -389,12 +235,12 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
         sorting.order.value = payload.order ?? null
       },
       async reload() {
-        await loadRemoteData(true)
+        await remoteFeature?.load(true)
       },
       exportXlsx() {
         if (!exportState?.enabled || !exportState.available) return
 
-        const exportRows = remoteMode ? remoteRows.value : allRows.value
+        const exportRows = remoteMode ? (remoteFeature?.rows.value ?? []) : allRows.value
         exportTableToXlsx(columns.value, exportRows, exportConfig)
       }
     },

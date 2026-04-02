@@ -487,6 +487,7 @@ export interface CreateRemoteStarTableOptions<T> extends CreateStarTableBaseOpti
    *
    * 支持普通对象、`ref`、`computed` 或 getter。
    * 当查询条件变化时，controller 会自动重新拉取数据。
+   * 框架会按稳定序列化结果比较变更，因此对象 key 顺序变化不会触发重复请求。
    */
   query?: MaybeRefOrGetter<Record<string, unknown>>
   /** 远程行为配置。 */

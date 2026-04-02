@@ -179,6 +179,40 @@ describe('createStarTable', () => {
     expect(table.rows.value.map((row) => row.id)).toEqual([1])
   })
 
+  it('分页配置和公共 action 应当忽略非法页码与非法 pageSize', async () => {
+    const table = createStarTable<UserRow>({
+      data: [
+        { id: 1, name: 'Alice', score: 30 },
+        { id: 2, name: 'Bob', score: 40 }
+      ],
+      rowKey: 'id',
+      columns: defineColumns([
+        textColumn('name', {
+          title: '姓名',
+          accessor: 'name'
+        })
+      ]),
+      features: {
+        pagination: {
+          page: 0,
+          pageSize: 0,
+          pageSizes: [0, -5, 20, 20]
+        }
+      }
+    })
+
+    expect(table.state.pagination?.currentPage.value).toBe(1)
+    expect(table.state.pagination?.pageSize.value).toBe(20)
+    expect(table.state.pagination?.pageSizes).toEqual([20])
+
+    table.actions.setPage(-3)
+    table.actions.setPageSize(0)
+    await nextTick()
+
+    expect(table.state.pagination?.currentPage.value).toBe(1)
+    expect(table.state.pagination?.pageSize.value).toBe(20)
+  })
+
   it('远程模式应当按统一参数协议调用 getData，并把结果注入 controller', async () => {
     const getData = vi.fn().mockResolvedValue({
       rows: [{ id: 101, name: 'Remote Alice', score: 88 }],
@@ -372,6 +406,45 @@ describe('createStarTable', () => {
         status: 'active'
       }
     })
+  })
+
+  it('远程 query 在语义不变但 key 顺序变化时不应重复请求', async () => {
+    const query = ref<Record<string, unknown>>({
+      keyword: 'Bob',
+      status: 'active'
+    })
+
+    const getData = vi.fn().mockResolvedValue({
+      rows: [{ id: 1, name: 'Bob', score: 90 }],
+      total: 1
+    })
+
+    createStarTable<UserRow>({
+      getData,
+      query,
+      rowKey: 'id',
+      columns: defineColumns([
+        textColumn('name', {
+          title: '姓名',
+          accessor: 'name'
+        })
+      ]),
+      features: {
+        pagination: true
+      }
+    })
+
+    await waitForExpectation(() => {
+      expect(getData).toHaveBeenCalledTimes(1)
+    })
+
+    query.value = {
+      status: 'active',
+      keyword: 'Bob'
+    }
+    await flushRemoteTasks()
+
+    expect(getData).toHaveBeenCalledTimes(1)
   })
 
   it('远程模式应当暴露完整状态机，并在 keepPreviousData=false 时先清空旧数据', async () => {
