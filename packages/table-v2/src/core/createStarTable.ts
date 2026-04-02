@@ -31,6 +31,24 @@ function isRemoteOptions<T>(
   return typeof (options as CreateRemoteStarTableOptions<T>).getData === 'function'
 }
 
+function resolveViewOptions(view: CreateStarTableOptions<unknown>['view']) {
+  if (!view || typeof view === 'string') {
+    return {
+      mode: view ?? 'table',
+      fill: true,
+      minHeight: 320,
+      loadingText: '加载中'
+    } as const
+  }
+
+  return {
+    mode: view.mode ?? 'table',
+    fill: view.fill ?? true,
+    minHeight: view.minHeight ?? 320,
+    loadingText: view.loadingText ?? '加载中'
+  } as const
+}
+
 function assertUniqueColumnKeys<T>(columns: TableColumn<T>[]) {
   const seen = new Set<string>()
 
@@ -60,6 +78,7 @@ async function invokeRemoteHook<Args extends unknown[]>(
 
 export function createStarTable<T>(options: CreateStarTableOptions<T>): TableController<T> {
   assertUniqueColumnKeys(options.columns)
+  const viewOptions = resolveViewOptions(options.view)
 
   const rowKey = options.rowKey
   const getRowId = (row: T) =>
@@ -276,8 +295,11 @@ export function createStarTable<T>(options: CreateStarTableOptions<T>): TableCon
 
   const controller: TableController<T> = {
     view: {
-      mode: options.view ?? 'table',
-      isVirtual: (options.view ?? 'table') === 'virtual'
+      mode: viewOptions.mode,
+      isVirtual: viewOptions.mode === 'virtual',
+      fill: viewOptions.fill,
+      minHeight: viewOptions.minHeight,
+      loadingText: viewOptions.loadingText
     },
     rowKey,
     getRowId,

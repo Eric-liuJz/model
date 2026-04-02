@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { Download, Rank, RefreshRight, Setting } from '@element-plus/icons-vue'
+import { Download, RefreshRight, Setting } from '@element-plus/icons-vue'
 import Sortable from 'sortablejs'
 import { useTableContext } from '../../core/context'
 
@@ -15,6 +15,7 @@ const states = table.state.columnSettings?.columns
 const exportState = computed(() => table.state.export)
 const visibleCount = computed(() => states?.value.filter((column) => column.visible).length ?? 0)
 const sortableListRef = ref<HTMLElement | null>(null)
+const isSorting = ref(false)
 let sortableInstance: Sortable | null = null
 
 const fixedOptions = [
@@ -33,14 +34,23 @@ function initSortable() {
   if (!element) return
 
   sortableInstance = Sortable.create(element, {
-    animation: 180,
+    animation: 150,
+    easing: 'cubic-bezier(0.2, 0, 0, 1)',
     handle: '.drag-handle',
     ghostClass: 'column-setting-ghost',
     chosenClass: 'column-setting-chosen',
     dragClass: 'column-setting-dragging',
+    fallbackTolerance: 4,
+    onStart: () => {
+      isSorting.value = true
+    },
     onEnd: ({ oldIndex, newIndex }) => {
+      isSorting.value = false
       if (oldIndex == null || newIndex == null || oldIndex === newIndex) return
       table.actions.reorderColumn(oldIndex, newIndex)
+    },
+    onSort: () => {
+      isSorting.value = true
     }
   })
 }
@@ -99,7 +109,7 @@ onBeforeUnmount(() => {
       <div class="drawer-header">
         <div class="drawer-header-main">
           <span class="drawer-title">列设置</span>
-          <p class="drawer-subtitle">管理列显示、固定方式与展示顺序</p>
+          <p class="drawer-subtitle">勾选控制显示，拖拽调整顺序。</p>
         </div>
         <el-button type="primary" link size="small" @click="table.actions.resetColumns()">
           重置默认
@@ -107,13 +117,10 @@ onBeforeUnmount(() => {
       </div>
     </template>
 
-    <div class="column-setting-panel">
+    <div class="column-setting-panel" :class="{ 'is-sorting': isSorting }">
       <div class="panel-summary">
-        <div>
-          <span class="summary-value">{{ visibleCount }}</span>
-          <span class="summary-label"> / {{ states.length }} 列可见</span>
-        </div>
-        <span class="summary-tip">切换显隐后立即生效</span>
+        <span class="summary-label">已显示 {{ visibleCount }} / {{ states.length }} 列</span>
+        <span class="summary-tip">修改即时生效</span>
       </div>
 
       <div ref="sortableListRef" class="column-setting-list">
@@ -125,7 +132,7 @@ onBeforeUnmount(() => {
         >
           <div class="item-main">
             <button type="button" class="drag-handle" aria-label="拖拽调整列顺序">
-              <el-icon><Rank /></el-icon>
+              <span class="drag-grip" aria-hidden="true" />
             </button>
             <el-checkbox
               :model-value="column.visible"

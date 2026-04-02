@@ -43,6 +43,31 @@ function createDeferred<T>() {
 }
 
 describe('createStarTable', () => {
+  it('应当把 view 配置归一化到 controller 上', () => {
+    const table = createStarTable<UserRow>({
+      data: [],
+      rowKey: 'id',
+      view: {
+        mode: 'virtual',
+        fill: false,
+        minHeight: '420px',
+        loadingText: '数据同步中'
+      },
+      columns: defineColumns([
+        textColumn('name', {
+          title: '姓名',
+          accessor: 'name'
+        })
+      ])
+    })
+
+    expect(table.view.mode).toBe('virtual')
+    expect(table.view.isVirtual).toBe(true)
+    expect(table.view.fill).toBe(false)
+    expect(table.view.minHeight).toBe('420px')
+    expect(table.view.loadingText).toBe('数据同步中')
+  })
+
   it('应当始终以外部传入的数据源作为单一事实来源', () => {
     const source = ref<UserRow[]>([
       { id: 1, name: 'Alice', score: 30 },

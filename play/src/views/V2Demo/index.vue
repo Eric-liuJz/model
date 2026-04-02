@@ -15,7 +15,7 @@ import {
   textColumn,
   dateColumn
 } from '@star-table/table-v2'
-import { ElMessage, ElTag } from 'element-plus'
+import { ElButton, ElMessage, ElTag } from 'element-plus'
 
 interface UserRow {
   id: number
@@ -42,6 +42,7 @@ function generateUsers(count: number): UserRow[] {
 }
 
 const users = ref(generateUsers(128))
+const featureTags = ['选择', '排序', '分页', '列设置', '导出', '固定列', '自定义渲染']
 
 const columns = defineColumns<UserRow>([
   selectionColumn({ fixed: 'left', width: 55 }),
@@ -144,25 +145,37 @@ function handleRefresh() {
 <template>
   <div class="demo-container">
     <div class="header">
-      <h2>Table V2 预览</h2>
-      <p class="subtitle">
-        全新包 <code>@star-table/table-v2</code>，以 controller 为中心组织 schema、feature 和 view
-      </p>
+      <h2>Table V2 组件能力</h2>
+      <p class="subtitle">面向业务的表格能力组合，默认开箱可用</p>
+      <div class="demo-tags">
+        <el-tag v-for="tag in featureTags" :key="tag" effect="plain" round>
+          {{ tag }}
+        </el-tag>
+      </div>
     </div>
 
-    <el-card shadow="never" class="table-card">
+    <el-card shadow="never" class="table-card demo-card">
       <StarTableRoot :table="table">
-        <StarTableToolbar @refresh="handleRefresh">
-          <template #left>
-            <el-space wrap>
+        <StarTableView>
+          <template #leftTop>
+            <div class="demo-summary">
               <el-tag type="success" effect="plain" round>共 {{ users.length }} 条</el-tag>
               <el-tag type="info" effect="plain" round>已选 {{ selectedCount }} 条</el-tag>
-            </el-space>
+            </div>
           </template>
-        </StarTableToolbar>
-
-        <StarTableView />
-        <StarTablePagination />
+          <template #rightTop>
+            <div class="demo-right-top">
+              <el-button type="primary" size="small">新建成员</el-button>
+              <StarTableToolbar @refresh="handleRefresh" />
+            </div>
+          </template>
+          <template #footer>
+            <div class="demo-footer">
+              <span class="demo-footer-text">已选 {{ selectedCount }} 条</span>
+              <StarTablePagination />
+            </div>
+          </template>
+        </StarTableView>
       </StarTableRoot>
     </el-card>
   </div>

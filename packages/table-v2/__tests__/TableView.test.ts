@@ -26,8 +26,12 @@ async function flushView() {
   await nextTick()
 }
 
-function createGlobalStubs(options?: { clearSelectionSpy?: ReturnType<typeof vi.fn> }) {
+function createGlobalStubs(options?: {
+  clearSelectionSpy?: ReturnType<typeof vi.fn>
+  toggleRowSelectionSpy?: ReturnType<typeof vi.fn>
+}) {
   const clearSelectionSpy = options?.clearSelectionSpy ?? vi.fn()
+  const toggleRowSelectionSpy = options?.toggleRowSelectionSpy ?? vi.fn()
 
   return {
     'el-table': defineComponent({
@@ -35,7 +39,8 @@ function createGlobalStubs(options?: { clearSelectionSpy?: ReturnType<typeof vi.
       template: '<div class="el-table-stub"><slot /></div>',
       props: ['data', 'rowKey', 'border'],
       methods: {
-        clearSelection: clearSelectionSpy
+        clearSelection: clearSelectionSpy,
+        toggleRowSelection: toggleRowSelectionSpy
       }
     }),
     'el-table-column': {
@@ -106,9 +111,9 @@ const SlotHost = defineComponent({
             custom-error:{{ (error && error.message) || String(error) }}
           </div>
         </template>
-        <template #overlay="{ isReloading }">
-          <div class="custom-overlay-state">
-            overlay:{{ isReloading ? 'on' : 'off' }}
+        <template #loading="{ isReloading }">
+          <div class="custom-loading-state">
+            loading:{{ isReloading ? 'reload' : 'initial' }}
           </div>
         </template>
       </StarTableView>
@@ -116,7 +121,7 @@ const SlotHost = defineComponent({
   `
 })
 
-const OverlayHost = defineComponent({
+const LayoutHost = defineComponent({
   props: {
     table: {
       type: Object,
@@ -130,10 +135,14 @@ const OverlayHost = defineComponent({
   template: `
     <StarTableRoot :table="table">
       <StarTableView>
-        <template #overlay="{ isReloading }">
-          <div class="custom-overlay-state">
-            overlay:{{ isReloading ? 'on' : 'off' }}
-          </div>
+        <template #leftTop>
+          <div class="custom-left-top">left</div>
+        </template>
+        <template #rightTop>
+          <div class="custom-right-top">right</div>
+        </template>
+        <template #footer>
+          <div class="custom-footer">footer</div>
         </template>
       </StarTableView>
     </StarTableRoot>
@@ -240,6 +249,7 @@ describe('StarTableView', () => {
 
   it('clearSelection 应当同步调用底层表格实例', async () => {
     const clearSelectionSpy = vi.fn()
+    const toggleRowSelectionSpy = vi.fn()
     const table = createStarTable<UserRow>({
       data: [
         { id: 1, name: 'Alice' },
@@ -261,18 +271,60 @@ describe('StarTableView', () => {
     mount(Host, {
       props: { table },
       global: {
-        stubs: createGlobalStubs({ clearSelectionSpy })
+        stubs: createGlobalStubs({ clearSelectionSpy, toggleRowSelectionSpy })
       }
     })
 
     table.actions.setSelection([{ id: 1, name: 'Alice' }])
     await nextTick()
     clearSelectionSpy.mockClear()
+    toggleRowSelectionSpy.mockClear()
 
     table.actions.clearSelection()
     await nextTick()
 
     expect(clearSelectionSpy).toHaveBeenCalledTimes(1)
+    expect(toggleRowSelectionSpy).not.toHaveBeenCalled()
+  })
+
+  it('setSelection 应当同步驱动底层表格勾选状态', async () => {
+    const clearSelectionSpy = vi.fn()
+    const toggleRowSelectionSpy = vi.fn()
+    const rows = [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' }
+    ]
+    const table = createStarTable<UserRow>({
+      data: rows,
+      rowKey: 'id',
+      columns: defineColumns([
+        selectionColumn(),
+        textColumn('name', {
+          title: '姓名',
+          accessor: 'name'
+        })
+      ]),
+      features: {
+        selection: true
+      }
+    })
+
+    mount(Host, {
+      props: { table },
+      global: {
+        stubs: createGlobalStubs({ clearSelectionSpy, toggleRowSelectionSpy })
+      }
+    })
+
+    clearSelectionSpy.mockClear()
+    toggleRowSelectionSpy.mockClear()
+
+    table.actions.setSelection([rows[1]])
+    await nextTick()
+
+    expect(clearSelectionSpy).toHaveBeenCalledTimes(1)
+    expect(toggleRowSelectionSpy).toHaveBeenCalledTimes(1)
+    expect(toggleRowSelectionSpy).toHaveBeenCalledWith(rows[1], true)
   })
 
   it('远程模式在首次加载时应展示默认 loading 态，并在空结果时切换为空态', async () => {
@@ -295,7 +347,7 @@ describe('StarTableView', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('正在加载数据')
+    expect(wrapper.text()).toContain('加载中')
 
     deferred.resolve({
       rows: [],
@@ -331,7 +383,7 @@ describe('StarTableView', () => {
     expect(wrapper.find('.custom-error-state').text()).toContain('custom-error:network failed')
   })
 
-  it('远程模式支持自定义刷新遮罩插槽', async () => {
+  it('远程模式在重新加载时会复用 loading 插槽作为表格区域遮罩', async () => {
     const secondDeferred = createDeferred<{ rows: UserRow[]; total: number }>()
     const getData = vi
       .fn()
@@ -356,7 +408,7 @@ describe('StarTableView', () => {
       }
     })
 
-    const wrapper = mount(OverlayHost, {
+    const wrapper = mount(SlotHost, {
       props: { table },
       global: {
         stubs: createGlobalStubs()
@@ -368,14 +420,38 @@ describe('StarTableView', () => {
     table.actions.setSort({ columnKey: 'name', order: 'ascending' })
     await flushView()
 
-    expect(wrapper.find('.custom-overlay-state').exists()).toBe(true)
-    expect(wrapper.find('.custom-overlay-state').text()).toContain('overlay:on')
+    expect(wrapper.find('.custom-loading-state').exists()).toBe(true)
+    expect(wrapper.find('.custom-loading-state').text()).toContain('loading:reload')
 
     secondDeferred.resolve({
       rows: [{ id: 2, name: 'Bob' }],
       total: 1
     })
     await flushView()
-    expect(wrapper.find('.custom-overlay-state').exists()).toBe(false)
+    expect(wrapper.find('.custom-loading-state').exists()).toBe(false)
+  })
+
+  it('支持 leftTop / rightTop / footer 插槽', () => {
+    const table = createStarTable<UserRow>({
+      data: [{ id: 1, name: 'Alice' }],
+      rowKey: 'id',
+      columns: defineColumns([
+        textColumn('name', {
+          title: '姓名',
+          accessor: 'name'
+        })
+      ])
+    })
+
+    const wrapper = mount(LayoutHost, {
+      props: { table },
+      global: {
+        stubs: createGlobalStubs()
+      }
+    })
+
+    expect(wrapper.find('.custom-left-top').text()).toBe('left')
+    expect(wrapper.find('.custom-right-top').text()).toBe('right')
+    expect(wrapper.find('.custom-footer').text()).toBe('footer')
   })
 })

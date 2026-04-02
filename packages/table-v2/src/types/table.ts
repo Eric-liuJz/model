@@ -10,6 +10,31 @@ import type { ColumnSettingsState, FixedDirection, ResolvedColumn, TableColumn }
 export type TableViewMode = 'table' | 'virtual'
 
 /**
+ * 表格视图层配置。
+ *
+ * 这部分只影响容器布局和默认状态表现，不影响列协议和数据行为。
+ */
+export interface TableViewOptions {
+  /** 视图模式，默认 `table`。 */
+  mode?: TableViewMode
+  /**
+   * 是否默认撑满父容器，默认 `true`。
+   *
+   * 启用后组件会尝试使用 `height: 100%` 占满父级，
+   * 父容器本身仍需提供可计算高度。
+   */
+  fill?: boolean
+  /**
+   * 表格区域最小高度，默认 `320`。
+   *
+   * 既支持 number，也支持合法 CSS 长度字符串。
+   */
+  minHeight?: number | string
+  /** 默认 loading 文案，默认 `加载中`。 */
+  loadingText?: string
+}
+
+/**
  * 分页 feature 配置。
  */
 export interface PaginationFeatureOptions {
@@ -349,6 +374,8 @@ export interface TableViewStateSlotProps<T> {
   isReloading: boolean
   /** 最近一次错误对象。 */
   error: unknown | null
+  /** 当前状态展示的呈现方式。 */
+  presentation: 'state' | 'mask' | 'inline'
   /** 重新触发一次当前上下文的数据加载。 */
   reload: () => Promise<void>
 }
@@ -414,8 +441,12 @@ export interface CreateStarTableBaseOptions<T> {
    * - 虚拟表格在函数模式下会自动包装成稳定内部字段
    */
   rowKey: keyof T | ((row: T) => string | number)
-  /** 视图模式，默认 `table`。 */
-  view?: TableViewMode
+  /**
+   * 视图配置，默认启用撑满父容器。
+   *
+   * 兼容直接传 `table` / `virtual` 简写。
+   */
+  view?: TableViewMode | TableViewOptions
   /** feature 配置集合。 */
   features?: TableFeatureOptions
 }
@@ -487,6 +518,9 @@ export interface TableController<T> {
   view: {
     mode: TableViewMode
     isVirtual: boolean
+    fill: boolean
+    minHeight: number | string
+    loadingText: string
   }
   /** 原始 rowKey 配置。 */
   rowKey: keyof T | ((row: T) => string | number)

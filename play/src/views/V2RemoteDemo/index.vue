@@ -47,11 +47,6 @@ function compareValues(left: unknown, right: unknown) {
 const keyword = ref('')
 const status = ref<'all' | RemoteUserRow['status']>('all')
 const simulateError = ref(false)
-const eventLogs = ref<string[]>([])
-
-function pushEventLog(message: string) {
-  eventLogs.value = [message, ...eventLogs.value].slice(0, 6)
-}
 
 const columns = defineColumns<RemoteUserRow>([
   textColumn('name', {
@@ -161,21 +156,7 @@ const table = createStarTable<RemoteUserRow>({
   columns,
   remote: {
     immediate: true,
-    keepPreviousData: true,
-    onBeforeLoad(params) {
-      pushEventLog(
-        `beforeLoad page=${params.page} keyword=${String(params.query.keyword ?? '') || '-'}`
-      )
-    },
-    onLoadSuccess(result, params) {
-      pushEventLog(`success page=${params.page} rows=${result.rows.length} total=${result.total}`)
-    },
-    onLoadError(error, params) {
-      pushEventLog(`error page=${params.page} ${(error as Error).message}`)
-    },
-    onLoadFinally(context) {
-      pushEventLog(`finally page=${context.params.page} status=${context.status}`)
-    }
+    keepPreviousData: true
   },
   features: {
     pagination: {
@@ -230,70 +211,49 @@ async function handleRefresh() {
       </p>
     </div>
 
-    <el-card shadow="never" class="table-card">
-      <div class="remote-toolbar">
-        <el-space wrap>
-          <ElInput
-            v-model="keyword"
-            placeholder="搜索成员名称/角色"
-            clearable
-            class="remote-keyword"
-          />
-          <el-select v-model="status" placeholder="筛选状态" class="remote-status">
-            <el-option label="全部状态" value="all" />
-            <el-option label="正常" value="active" />
-            <el-option label="审核中" value="reviewing" />
-            <el-option label="受限" value="blocked" />
-          </el-select>
-          <el-switch
-            v-model="simulateError"
-            inline-prompt
-            active-text="错误"
-            inactive-text="正常"
-          />
-        </el-space>
-
-        <el-space wrap>
-          <el-tag
-            :type="loading ? 'warning' : remoteError ? 'danger' : 'success'"
-            effect="plain"
-            round
-          >
-            {{ statusText }}
-          </el-tag>
-          <el-tag type="info" effect="plain" round>总数 {{ totalCount }}</el-tag>
-          <el-tag type="info" effect="plain" round>上次更新时间 {{ lastUpdated }}</el-tag>
-          <el-tag v-if="isReloading" type="warning" effect="plain" round>保留旧数据刷新中</el-tag>
-        </el-space>
-      </div>
-
-      <div class="remote-layout">
-        <div>
-          <StarTableRoot :table="table">
-            <StarTableToolbar @refresh="handleRefresh" />
-            <StarTableView />
-            <StarTablePagination />
-          </StarTableRoot>
-        </div>
-
-        <el-card shadow="never" class="remote-log-card">
-          <template #header>
-            <div class="remote-log-title">生命周期日志</div>
+    <el-card shadow="never" class="table-card demo-card">
+      <StarTableRoot :table="table">
+        <StarTableView>
+          <template #leftTop>
+            <el-space wrap>
+              <ElInput
+                v-model="keyword"
+                placeholder="搜索成员名称/角色"
+                clearable
+                class="remote-keyword"
+              />
+              <el-select v-model="status" placeholder="筛选状态" class="remote-status">
+                <el-option label="全部状态" value="all" />
+                <el-option label="正常" value="active" />
+                <el-option label="审核中" value="reviewing" />
+                <el-option label="受限" value="blocked" />
+              </el-select>
+              <el-switch
+                v-model="simulateError"
+                inline-prompt
+                active-text="错误"
+                inactive-text="正常"
+              />
+              <el-tag
+                :type="loading ? 'warning' : remoteError ? 'danger' : 'success'"
+                effect="plain"
+                round
+              >
+                {{ statusText }}
+              </el-tag>
+              <el-tag type="info" effect="plain" round>总数 {{ totalCount }}</el-tag>
+              <el-tag type="info" effect="plain" round>上次更新时间 {{ lastUpdated }}</el-tag>
+              <el-tag v-if="isReloading" type="warning" effect="plain" round>刷新中</el-tag>
+            </el-space>
           </template>
-
-          <div class="remote-log-list">
-            <div
-              v-for="(item, index) in eventLogs"
-              :key="`${index}-${item}`"
-              class="remote-log-item"
-            >
-              {{ item }}
-            </div>
-
-            <div v-if="eventLogs.length === 0" class="remote-log-empty">暂无日志</div>
-          </div>
-        </el-card>
-      </div>
+          <template #rightTop>
+            <StarTableToolbar @refresh="handleRefresh" />
+          </template>
+          <template #footer>
+            <StarTablePagination />
+          </template>
+        </StarTableView>
+      </StarTableRoot>
     </el-card>
   </div>
 </template>

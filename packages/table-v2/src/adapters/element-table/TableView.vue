@@ -4,7 +4,10 @@ import { useTableContext } from '../../core/context'
 import { VNodeRenderer } from '../../core/VNodeRenderer'
 
 const table = useTableContext<T>()
-const tableRef = ref<{ clearSelection?: () => void } | null>(null)
+const tableRef = ref<{
+  clearSelection?: () => void
+  toggleRowSelection?: (row: T, selected?: boolean) => void
+} | null>(null)
 const rows = computed(() => table.rows.value)
 const controllerSortingEnabled = computed(() => !!table.state.sorting?.enabled)
 const selectionState = computed(() => table.state.selection)
@@ -28,11 +31,25 @@ function resolveSortable(
 }
 
 watch(
-  () => selectionState.value?.keys.value ?? [],
-  (keys) => {
-    if (keys.length === 0) {
-      tableRef.value?.clearSelection?.()
-    }
+  () => ({
+    keys: selectionState.value?.keys.value ?? [],
+    rows: rows.value
+  }),
+  ({ keys, rows: visibleRows }) => {
+    const instance = tableRef.value
+    if (!instance) return
+
+    const keySet = new Set(keys)
+
+    instance.clearSelection?.()
+
+    if (keySet.size === 0 || !instance.toggleRowSelection) return
+
+    visibleRows.forEach((row) => {
+      if (keySet.has(table.getRowId(row))) {
+        instance.toggleRowSelection?.(row, true)
+      }
+    })
   },
   { flush: 'post' }
 )
@@ -41,8 +58,10 @@ watch(
 <template>
   <el-table
     ref="tableRef"
+    class="star-table-v2-native-table"
     :data="rows"
     :row-key="typeof table.rowKey === 'function' ? (table.getRowId as any) : table.rowKey"
+    :height="table.view.fill ? '100%' : undefined"
     border
     @selection-change="(rows: T[]) => table.actions.setSelection(rows)"
     @sort-change="table.actions.setSort"
